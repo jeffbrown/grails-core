@@ -1,0 +1,100 @@
+/* Copyright 2013 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.grails.databinding.xml
+
+import spock.lang.Specification
+
+class GPathResultMapSpec extends Specification {
+
+    void 'Test basic Map operations'() {
+        given:
+        def xml = new XmlSlurper().parseText('''
+<sports>
+    <country>USA</country>
+    <baseball>
+        <team>Cardinals</team>
+        <team>Cubs</team>
+        <equipment>
+            <bats>
+                <material>wood</material>
+                <manufacturer>Easton</manufacturer>
+                <manufacturer>Louisville Slugger</manufacturer>
+            </bats>
+        </equipment>
+    </baseball>
+    <hockey>
+        <team>Blues</team>
+        <team>Blackhawks</team>
+    </hockey>
+</sports>
+''')
+        when:
+        def sports = new GPathResultMap(xml)
+
+        then:
+        sports.size() == 3
+        sports.country == 'USA'
+        sports.baseball instanceof Map
+        sports.baseball.team instanceof List
+        sports.baseball.team.size() == 2
+        sports.baseball.team[0] == 'Cardinals'
+        sports.baseball.team[1] == 'Cubs'
+        sports.hockey instanceof Map
+        sports.hockey.team instanceof List
+        sports.hockey.team.size() == 2
+        sports.hockey.team[0] == 'Blues'
+        sports.hockey.team[1] == 'Blackhawks'
+        sports.baseball.equipment.bats instanceof Map
+        sports.baseball.equipment.bats.size() == 2
+        sports.baseball.equipment.bats.material == 'wood'
+        sports.baseball.equipment.bats.manufacturer instanceof List
+        sports.baseball.equipment.bats.manufacturer.size() == 2
+        sports.baseball.equipment.bats.manufacturer[0] == 'Easton'
+        sports.baseball.equipment.bats.manufacturer[1] == 'Louisville Slugger'
+        sports.containsKey 'country'
+        !sports.containsKey('foo')
+        !sports.isEmpty()
+
+        when:
+        def entries = sports.entrySet()
+
+        then:
+        entries.size() == 3
+
+        when:
+        def keys = sports.keySet()
+
+        then:
+        keys.size() == 3
+        'hockey' in keys
+        'baseball' in keys
+        'country' in keys
+    }
+
+    void 'Test empty Map'() {
+        given:
+        def xml = new XmlSlurper().parseText('''
+<root>
+</root>
+''')
+        when:
+        def map = new GPathResultMap(xml)
+
+        then:
+        map.isEmpty()
+        !map.containsKey('foo')
+        map.size() == 0
+    }
+}
