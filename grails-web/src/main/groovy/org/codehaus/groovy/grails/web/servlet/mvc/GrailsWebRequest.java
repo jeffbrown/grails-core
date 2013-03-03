@@ -69,6 +69,7 @@ public class GrailsWebRequest implements ParameterInitializationCallback, Native
 
     private DispatcherServletWebRequest targetWebRequest;
     private boolean active;
+	private Set<Integer> htmlEncodedIdentityHashCodes=new HashSet<Integer>();
 
     public GrailsWebRequest(HttpServletRequest request, HttpServletResponse response, ServletContext servletContext) {
         targetWebRequest = new DispatcherServletWebRequest(request, response);
@@ -464,5 +465,13 @@ public class GrailsWebRequest implements ParameterInitializationCallback, Native
 
     public HttpServletRequest getRequest() {
         return targetWebRequest.getRequest();
+    }
+
+   public boolean isHtmlEscaped(String string) {
+        return htmlEncodedIdentityHashCodes.contains(System.identityHashCode(string));
+    }
+
+    public void registerHtmlEscaped(String escaped) {
+        htmlEncodedIdentityHashCodes.add(System.identityHashCode(escaped));
     }
 }
