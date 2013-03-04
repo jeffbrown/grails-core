@@ -20,13 +20,24 @@ import grails.validation.DeferredBindingActions;
 import java.io.IOException;
 import java.io.Writer;
 import java.security.Principal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.codehaus.groovy.grails.commons.ControllerArtefactHandler;
+import org.codehaus.groovy.grails.commons.DefaultGrailsCodecClass;
+import org.codehaus.groovy.grails.commons.EncodingState;
+import org.codehaus.groovy.grails.commons.EncodingStateLookup;
 import org.codehaus.groovy.grails.commons.GrailsApplication;
 import org.codehaus.groovy.grails.commons.GrailsControllerClass;
 import org.codehaus.groovy.grails.web.binding.GrailsDataBinder;
@@ -37,7 +48,6 @@ import org.codehaus.groovy.grails.web.servlet.mvc.exceptions.ControllerExecution
 import org.springframework.beans.PropertyEditorRegistry;
 import org.springframework.beans.PropertyEditorRegistrySupport;
 import org.springframework.context.ApplicationContext;
-import org.springframework.mock.web.portlet.MockClientDataRequest;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -54,7 +64,7 @@ import org.springframework.web.util.UrlPathHelper;
  * @author Graeme Rocher
  * @since 0.4
  */
-public class GrailsWebRequest implements ParameterInitializationCallback, NativeWebRequest,RequestAttributes {
+public class GrailsWebRequest implements ParameterInitializationCallback, NativeWebRequest,RequestAttributes, EncodingState {
 
     private GrailsApplicationAttributes attributes;
     private GrailsParameterMap params;
@@ -476,7 +486,7 @@ public class GrailsWebRequest implements ParameterInitializationCallback, Native
         return identityHashCodes;
     }
 
-    public Set<String> getEncodingTagsFor(String string) {
+    public Set<String> getEncodingTagsFor(CharSequence string) {
         int identityHashCode = System.identityHashCode(string);
         Set<String> result=null;
         for(Map.Entry<String, Set<Integer>> entry : encodingTagIdentityHashCodes.entrySet()) {
@@ -494,11 +504,22 @@ public class GrailsWebRequest implements ParameterInitializationCallback, Native
         return result;
     }
     
-    public boolean isEncodedWith(String encoding, String string) {
+    public boolean isEncodedWith(String encoding, CharSequence string) {
         return getIdentityHashCodesForEncoding(encoding).contains(System.identityHashCode(string));
     }
 
-    public void registerEncodedWith(String encoding, String escaped) {
+    public void registerEncodedWith(String encoding, CharSequence escaped) {
         getIdentityHashCodesForEncoding(encoding).add(System.identityHashCode(escaped));
     }
+    
+    private static final class DefaultEncodingStateLookup implements EncodingStateLookup {
+        public EncodingState lookup() {
+            return GrailsWebRequest.lookup();
+        }
+    }
+    
+    static {
+        DefaultGrailsCodecClass.setEncodingStateLookup(new DefaultEncodingStateLookup());
+    }
+    
 }
