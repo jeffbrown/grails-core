@@ -122,9 +122,8 @@ class SimpleDataBinder implements DataBinder {
     }
 
     protected processProperty(obj, String propName, val, Map source, List whiteList, List blackList, DataBindingListener listener) {
-        if(propName ==~ INDEXED_PROPERTY_REGEX) {
-            Matcher matcher = propName =~ INDEXED_PROPERTY_REGEX
-            matcher[0]
+        def matcher = propName =~ INDEXED_PROPERTY_REGEX
+        if(matcher) {
             def simplePropertyName = matcher.group(1)
             def metaProperty = obj.metaClass.getMetaProperty simplePropertyName
             if(metaProperty) {
