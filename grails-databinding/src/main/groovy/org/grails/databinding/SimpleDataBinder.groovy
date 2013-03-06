@@ -90,6 +90,7 @@ class SimpleDataBinder implements DataBinder {
         def structuredPropertiesProcessed = []
         source.each {String propName, val ->
             if(isOkToBind(propName, whiteList, blackList)) {
+                def isStructuredEditorProperty = false
                 def metaProperty = obj.metaClass.getMetaProperty propName
                 if(!metaProperty && propName.indexOf('_') > 0) {
                     def simplePropName = propName[0..<propName.indexOf('_')]
@@ -99,6 +100,7 @@ class SimpleDataBinder implements DataBinder {
                             metaProperty = obj.metaClass.getMetaProperty simplePropName
                             if(metaProperty) {
                                 propName = simplePropName
+                                isStructuredEditorProperty = true
                             }
                         }
                     }
@@ -107,7 +109,7 @@ class SimpleDataBinder implements DataBinder {
                     def propertyType = metaProperty.type
                     if(typeConverters.containsKey(propertyType)) {
                         def converter = typeConverters[propertyType]
-                        if((!converter instanceof DateConverter) || containsStructuredValues(source, propName)) {
+                        if(!(converter instanceof DateConverter) || isStructuredEditorProperty) {
                             val = typeConverters[propertyType].convertValue obj, propName, source
                         }
                     }
@@ -160,15 +162,6 @@ class SimpleDataBinder implements DataBinder {
             obj[propertyName] = new ArrayList()
         }
         obj[propertyName]
-    }
-
-    protected containsStructuredValues(Map<String, Object>source, String propName) {
-        source.find {String k, v ->
-            k.startsWith propName + '_'
-        } != null
-    }
-
-    protected handleIndexedProperties(Map source, obj) {
     }
 
     protected ValueConverter getValueConverterForField(obj, String propName) {
