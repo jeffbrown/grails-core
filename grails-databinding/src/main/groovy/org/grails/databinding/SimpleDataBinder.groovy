@@ -21,6 +21,7 @@ import groovy.util.slurpersupport.GPathResult
 import java.lang.reflect.ParameterizedType
 import java.util.regex.Matcher
 
+import org.codehaus.groovy.classgen.Verifier.DefaultArgsAction;
 import org.grails.databinding.converters.BooleanConversionHelper
 import org.grails.databinding.converters.ByteConversionHelper
 import org.grails.databinding.converters.CharConversionHelper
@@ -136,7 +137,7 @@ class SimpleDataBinder implements DataBinder {
                     }
                     def indexedInstance = collectionInstance[index]
                     if(indexedInstance == null) {
-                        Class genericType = ((ParameterizedType)obj.getClass().getDeclaredField(simplePropertyName).genericType).getActualTypeArguments()[0]
+                        Class genericType = getReferencedTypeForCollection(simplePropertyName, obj)
                         indexedInstance = genericType.newInstance()
                         addElementToCollectionAt collectionInstance, index, indexedInstance
                     }
@@ -149,6 +150,17 @@ class SimpleDataBinder implements DataBinder {
             }
         }
     }
+
+    protected Class<?> getReferencedTypeForCollection(String propertyName, Object obj) {
+        Class contentType
+        def clazz = obj.getClass()
+        def field = clazz.getDeclaredField(propertyName)
+        def genericType = field.genericType
+        if(genericType instanceof ParameterizedType) {
+            contentType = ((ParameterizedType)genericType).getActualTypeArguments()[0]
+        }
+        contentType
+	}
 
     @CompileStatic(TypeCheckingMode.SKIP)
     protected addElementToCollectionAt(Collection collection, index, val) {
@@ -211,7 +223,14 @@ class SimpleDataBinder implements DataBinder {
         }
         if(listener == null || listener.beforeBinding(obj, propName, propertyValue) != false) {
             def metaProperty = obj.metaClass.getMetaProperty(propName)
-            def propertyType = metaProperty.type
+            def propertyType
+            if(metaProperty instanceof MetaBeanProperty) {
+                def mbp = (MetaBeanProperty)metaProperty
+                propertyType = mbp.field?.type
+            }
+            if(propertyType == null) {
+                propertyType = metaProperty.type
+            }
 
             if(propertyValue == null || propertyType == Object || propertyType.isAssignableFrom(propertyValue.getClass())) {
                 obj[propName] = propertyValue

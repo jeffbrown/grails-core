@@ -42,11 +42,39 @@ class GormAwareDataBinderSpec extends GormSpec {
 		publication.title == 'Infinite Jest'
 		publication.author == null
 	}
+    
+    void 'Test binding to a hasMany List'() {
+        given:
+        def binder = new GormAwareDataBinder(grailsApplication: grailsApplication)
+        def publisher = new Publisher()
+        
+        when:
+        binder.bind publisher, [name: 'Apress', 
+                                'publications[0]': [title: 'DGG', author: [name: 'Graeme']], 
+                                'publications[2]': [title: 'DGG2', author: [name: 'Jeff']]]
+        
+        then:
+        publisher.name == 'Apress'
+        publisher.publications instanceof List
+        publisher.publications.size() == 3
+        publisher.publications[0].title == 'DGG'
+        publisher.publications[0].author.name == 'Graeme'
+        publisher.publications[1] == null
+        publisher.publications[2].title == 'DGG2'
+        publisher.publications[2].author.name == 'Jeff'
+    }
 	
 	@Override
 	List getDomainClasses() {
-		[Publication, Author]
+		[Publication, Author, Publisher]
 	}
+}
+
+@Entity
+class Publisher {
+    String name
+    static hasMany = [publications: Publication]
+    List publications
 }
 
 @Entity

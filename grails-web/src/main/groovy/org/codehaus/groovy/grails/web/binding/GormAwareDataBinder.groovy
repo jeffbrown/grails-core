@@ -16,13 +16,36 @@ package org.codehaus.groovy.grails.web.binding
 
 import groovy.transform.CompileStatic
 
+import org.codehaus.groovy.grails.commons.DomainClassArtefactHandler
+import org.codehaus.groovy.grails.commons.GrailsApplication
+import org.codehaus.groovy.grails.commons.GrailsDomainClass
+import org.codehaus.groovy.grails.commons.GrailsDomainClassProperty
 import org.codehaus.groovy.runtime.InvokerHelper
 import org.grails.databinding.SimpleDataBinder
 import org.grails.databinding.events.DataBindingListener
 
 @CompileStatic
 class GormAwareDataBinder extends SimpleDataBinder {
+    
+    GrailsApplication grailsApplication
 
+    @Override    
+    protected Class<?> getReferencedTypeForCollection(String name, Object target) {
+        Class referencedType = null
+        if (grailsApplication != null) {
+            GrailsDomainClass dc = (GrailsDomainClass) grailsApplication.getArtefact(
+                    DomainClassArtefactHandler.TYPE, target.getClass().getName());
+            if (dc != null) {
+                GrailsDomainClassProperty domainProperty = dc.getPersistentProperty(name);
+                if (domainProperty != null) {
+                    referencedType = domainProperty.getReferencedPropertyType();
+                }
+            }
+        }
+        referencedType ?: super.getReferencedTypeForCollection(name, target)
+    }
+
+    
 	@Override
 	protected processProperty(obj, String propName, val, Map source,  List whiteList, List blackList, DataBindingListener listener) {
 		if(propName.endsWith('.id')) {
