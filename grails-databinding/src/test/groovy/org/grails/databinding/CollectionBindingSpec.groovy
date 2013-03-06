@@ -84,6 +84,26 @@ class CollectionBindingSpec extends Specification {
         company.departments[9].name == 'Department Nine'
         company.departments[9].numberOfEmployees == 42
     }
+    void 'Test white space around index'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def company = new Company()
+        company.departments = []
+
+        when:
+        binder.bind company, [name: 'Some Company',
+                              'departments[ 2  ]': [numberOfEmployees: '99', name: 'Department Two']]
+
+        then:
+        company.name == 'Some Company'
+        company.departments instanceof List
+        company.departments.size() == 3
+        company.departments[0] == null
+        company.departments[1] == null
+        company.departments[2] instanceof Department
+        company.departments[2].name == 'Department Two'
+        company.departments[2].numberOfEmployees == 99
+    }
 }
 
 class Company {

@@ -41,7 +41,7 @@ class SimpleDataBinder implements DataBinder {
     protected Map<Class, DataConverter> typeConverters = new HashMap<Class, DataConverter>()
     protected Map<Class, ValueConverter> conversionHelpers = new HashMap<Class, ValueConverter>()
 
-    static final INDEXED_PROPERTY_REGEX = /(.*)\[(\d+)\]/
+    static final INDEXED_PROPERTY_REGEX = /(.*)\[\s*(\d+)\s*\]/
 
     SimpleDataBinder() {
         conversionHelpers.put(Boolean.TYPE, new BooleanConversionHelper())
