@@ -20,39 +20,39 @@ import org.codehaus.groovy.grails.web.binding.GormAwareDataBinder
 
 class GormAwareDataBinderSpec extends GormSpec {
 
-	void 'Test dotted id binding'() {
-		given:
-		def binder = new GormAwareDataBinder()
-		def author = new Author(name: 'David Foster Wallace').save(flush: true)
-		def publication = new Publication()
-		
-		when:
-	    binder.bind publication, [title: 'Infinite Jest', 'author.id': author.id]
-		
-		then:
-		publication.title == 'Infinite Jest'
-		publication.author.name == 'David Foster Wallace'
-		
-		when:
-		publication.author = null
-		publication.title = null
-	    binder.bind publication, [title: 'Infinite Jest', 'author.id': author.id], [], ['author']
-		
-		then:
-		publication.title == 'Infinite Jest'
-		publication.author == null
-	}
-    
+    void 'Test dotted id binding'() {
+        given:
+        def binder = new GormAwareDataBinder()
+        def author = new Author(name: 'David Foster Wallace').save(flush: true)
+        def publication = new Publication()
+
+        when:
+        binder.bind publication, [title: 'Infinite Jest', 'author.id': author.id]
+
+        then:
+        publication.title == 'Infinite Jest'
+        publication.author.name == 'David Foster Wallace'
+
+        when:
+        publication.author = null
+        publication.title = null
+        binder.bind publication, [title: 'Infinite Jest', 'author.id': author.id], [], ['author']
+
+        then:
+        publication.title == 'Infinite Jest'
+        publication.author == null
+    }
+
     void 'Test binding to a hasMany List'() {
         given:
         def binder = new GormAwareDataBinder(grailsApplication: grailsApplication)
         def publisher = new Publisher()
-        
+
         when:
-        binder.bind publisher, [name: 'Apress', 
-                                'publications[0]': [title: 'DGG', author: [name: 'Graeme']], 
-                                'publications[2]': [title: 'DGG2', author: [name: 'Jeff']]]
-        
+        binder.bind publisher, [name: 'Apress',
+            'publications[0]': [title: 'DGG', author: [name: 'Graeme']],
+            'publications[2]': [title: 'DGG2', author: [name: 'Jeff']]]
+
         then:
         publisher.name == 'Apress'
         publisher.publications instanceof List
@@ -63,11 +63,11 @@ class GormAwareDataBinderSpec extends GormSpec {
         publisher.publications[2].title == 'DGG2'
         publisher.publications[2].author.name == 'Jeff'
     }
-	
-	@Override
-	List getDomainClasses() {
-		[Publication, Author, Publisher]
-	}
+
+    @Override
+    List getDomainClasses() {
+        [Publication, Author, Publisher]
+    }
 }
 
 @Entity
@@ -79,11 +79,11 @@ class Publisher {
 
 @Entity
 class Publication {
-	String title
-	Author author
+    String title
+    Author author
 }
 
 @Entity
 class Author {
-	String name
+    String name
 }
