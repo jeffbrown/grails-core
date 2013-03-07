@@ -1,3 +1,5 @@
+
+
 /* Copyright 2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +17,7 @@
 package org.codehaus.groovy.grails.web.binding
 
 import grails.util.Environment
+import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
 import groovy.util.slurpersupport.GPathResult
 
@@ -26,6 +29,7 @@ import org.codehaus.groovy.grails.commons.DomainClassArtefactHandler
 import org.codehaus.groovy.grails.commons.GrailsApplication
 import org.codehaus.groovy.grails.commons.GrailsDomainClass
 import org.codehaus.groovy.grails.commons.GrailsDomainClassProperty
+import org.codehaus.groovy.grails.commons.GrailsMetaClassUtils
 import org.codehaus.groovy.runtime.InvokerHelper
 import org.grails.databinding.SimpleDataBinder
 import org.grails.databinding.events.DataBindingListener
@@ -33,9 +37,9 @@ import org.grails.databinding.xml.GPathResultMap
 
 @CompileStatic
 class GormAwareDataBinder extends SimpleDataBinder {
-    private static final Map<Class, List> CLASS_TO_BINDING_INCLUDE_LIST = new ConcurrentHashMap<Class, List>();
+    private static final Map<Class, List> CLASS_TO_BINDING_INCLUDE_LIST = new ConcurrentHashMap<Class, List>()
     GrailsApplication grailsApplication
-    
+
     void bind(obj, Map source) {
         bind obj, source, getBindingIncludeList(obj), null, null
     }
@@ -47,17 +51,17 @@ class GormAwareDataBinder extends SimpleDataBinder {
     void bind(obj, GPathResult gpath) {
         bind obj, new GPathResultMap(gpath), getBindingIncludeList(obj)
     }
-    
+
     @Override
     protected Class<?> getReferencedTypeForCollection(String name, Object target) {
         Class referencedType = null
         if (grailsApplication != null) {
             GrailsDomainClass dc = (GrailsDomainClass) grailsApplication.getArtefact(
-                    DomainClassArtefactHandler.TYPE, target.getClass().getName());
+            DomainClassArtefactHandler.TYPE, target.getClass().getName())
             if (dc != null) {
-                GrailsDomainClassProperty domainProperty = dc.getPersistentProperty(name);
+                GrailsDomainClassProperty domainProperty = dc.getPersistentProperty(name)
                 if (domainProperty != null) {
-                    referencedType = domainProperty.getReferencedPropertyType();
+                    referencedType = domainProperty.getReferencedPropertyType()
                 }
             }
         }
@@ -76,7 +80,7 @@ class GormAwareDataBinder extends SimpleDataBinder {
                     if(collection instanceof Collection) {
                         def referencedType = getReferencedTypeForCollection descriptor.propertyName, obj
                         if(referencedType) {
-                            addElementToCollectionAt (collection, descriptor.index, 'null' == val ? null : InvokerHelper.invokeStaticMethod(referencedType, 'get', val.toString()))
+                            addElementToCollectionAt (obj, descriptor.propertyName, collection, descriptor.index, 'null' == val ? null : InvokerHelper.invokeStaticMethod(referencedType, 'get', val.toString()))
                         }
                     }
                 }
@@ -93,29 +97,37 @@ class GormAwareDataBinder extends SimpleDataBinder {
             super.processProperty obj, propName, val, source, whiteList, blackList, listener
         }
     }
-    
+
     private static List getBindingIncludeList(final Object object) {
-        List includeList = Collections.EMPTY_LIST;
+        List includeList = Collections.EMPTY_LIST
         try {
-            final Class<? extends Object> objectClass = object.getClass();
+            final Class<? extends Object> objectClass = object.getClass()
             if (CLASS_TO_BINDING_INCLUDE_LIST.containsKey(objectClass)) {
-                includeList = CLASS_TO_BINDING_INCLUDE_LIST.get(objectClass);
+                includeList = CLASS_TO_BINDING_INCLUDE_LIST.get(objectClass)
             } else {
-                final Field whiteListField = objectClass.getDeclaredField(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST);
+                final Field whiteListField = objectClass.getDeclaredField(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST)
                 if (whiteListField != null) {
                     if ((whiteListField.getModifiers() & Modifier.STATIC) != 0) {
-                         final Object whiteListValue = whiteListField.get(objectClass);
-                         if (whiteListValue instanceof List) {
-                             includeList = (List)whiteListValue;
-                         }
+                        final Object whiteListValue = whiteListField.get(objectClass)
+                        if (whiteListValue instanceof List) {
+                            includeList = (List)whiteListValue
+                        }
                     }
                 }
                 if (!Environment.getCurrent().isReloadEnabled()) {
-                    CLASS_TO_BINDING_INCLUDE_LIST.put(objectClass, includeList);
+                    CLASS_TO_BINDING_INCLUDE_LIST.put objectClass, includeList
                 }
             }
         } catch (Exception e) {
         }
-        return includeList;
+        includeList
+    }
+
+    @Override
+    protected addElementToCollectionAt(obj, String propertyName, Collection collection, index, val) {
+        def methodName = "addTo" + GrailsNameUtils.getClassName(propertyName)
+        if(GrailsMetaClassUtils.invokeMethodIfExists(obj, methodName, [val] as Object[]) == null) {
+            super.addElementToCollectionAt obj, propertyName, collection, index, val
+        }
     }
 }

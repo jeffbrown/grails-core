@@ -56,17 +56,18 @@ class GormAwareDataBinderSpec extends GormSpec {
         when:
         binder.bind publisher, [name: 'Apress',
             'publications[0]': [title: 'DGG', author: [name: 'Graeme']],
-            'publications[2]': [title: 'DGG2', author: [name: 'Jeff']]]
+            'publications[1]': [title: 'DGG2', author: [name: 'Jeff']]]
 
         then:
         publisher.name == 'Apress'
         publisher.publications instanceof List
-        publisher.publications.size() == 3
+        publisher.publications.size() == 2
         publisher.publications[0].title == 'DGG'
         publisher.publications[0].author.name == 'Graeme'
-        publisher.publications[1] == null
-        publisher.publications[2].title == 'DGG2'
-        publisher.publications[2].author.name == 'Jeff'
+        publisher.publications[0].publisher == publisher
+        publisher.publications[1].title == 'DGG2'
+        publisher.publications[1].author.name == 'Jeff'
+        publisher.publications[1].publisher == publisher
     }
 
     void 'Test bindable'() {
@@ -99,6 +100,7 @@ class Publisher {
 class Publication {
     String title
     Author author
+    static belongsTo = [publisher: Publisher]
 }
 
 @Entity

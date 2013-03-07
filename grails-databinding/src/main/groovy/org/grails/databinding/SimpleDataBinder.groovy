@@ -150,16 +150,16 @@ class SimpleDataBinder implements DataBinder {
                         Class genericType = getReferencedTypeForCollection(simplePropertyName, obj)
                         if(genericType) {
                             indexedInstance = genericType.newInstance()
-                            addElementToCollectionAt collectionInstance, index, indexedInstance
+                            addElementToCollectionAt obj, simplePropertyName, collectionInstance, index, indexedInstance
                         } else {
-                            addElementToCollectionAt collectionInstance, index, val
+                            addElementToCollectionAt obj, simplePropertyName, collectionInstance, index, val
                         }
                     }
                     if(indexedInstance != null) {
                         if(val instanceof Map) {
                             bind indexedInstance, (Map)val, listener
                         } else if (val == null && indexedInstance != null) {
-                            addElementToCollectionAt collectionInstance, index, null
+                            addElementToCollectionAt obj, simplePropertyName, collectionInstance, index, null
                         }
                     }
                 } else if(Map.isAssignableFrom(propertyType)) {
@@ -185,7 +185,7 @@ class SimpleDataBinder implements DataBinder {
     }
 
     @CompileStatic(TypeCheckingMode.SKIP)
-    protected addElementToCollectionAt(Collection collection, index, val) {
+    protected addElementToCollectionAt(obj, String propertyName, Collection collection, index, val) {
         // TODO
         if(collection instanceof ListOrderedSet) {
             collection.add index, val
