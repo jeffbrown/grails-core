@@ -41,7 +41,7 @@ class SimpleDataBinder implements DataBinder {
     protected Map<Class, DataConverter> typeConverters = new HashMap<Class, DataConverter>()
     protected Map<Class, ValueConverter> conversionHelpers = new HashMap<Class, ValueConverter>()
 
-    static final INDEXED_PROPERTY_REGEX = /(.*)\[\s*(\d+)\s*\]/
+    static final INDEXED_PROPERTY_REGEX = /(.*)\[\s*([^\s]*)\s*\]/
 
     SimpleDataBinder() {
         conversionHelpers.put(Boolean.TYPE, new BooleanConversionHelper())
@@ -126,7 +126,7 @@ class SimpleDataBinder implements DataBinder {
         def matcher = propName =~ INDEXED_PROPERTY_REGEX
         if(matcher) {
             def indexedPropertyName = matcher.group(1)
-            def index = Integer.parseInt(matcher.group(2))
+            def index = matcher.group(2)
             descriptor = new IndexedPropertyReferenceDescriptor(propertyName: indexedPropertyName, index: index)
         }
         descriptor
@@ -138,9 +138,9 @@ class SimpleDataBinder implements DataBinder {
             def simplePropertyName = indexedPropertyReferenceDescriptor.propertyName
             def metaProperty = obj.metaClass.getMetaProperty simplePropertyName
             if(metaProperty && isOkToBind(metaProperty.name, whiteList, blackList)) {
-                def index = indexedPropertyReferenceDescriptor.index
                 def propertyType = metaProperty.type
                 if(Collection.isAssignableFrom(propertyType)) {
+                    def index = Integer.parseInt(indexedPropertyReferenceDescriptor.index)
                     Collection collectionInstance = (Collection)obj[simplePropertyName]
                     if(collectionInstance == null) {
                         collectionInstance = initializeCollection obj, simplePropertyName, propertyType
@@ -162,6 +162,12 @@ class SimpleDataBinder implements DataBinder {
                             addElementToCollectionAt collectionInstance, index, null
                         }
                     }
+                } else if(Map.isAssignableFrom(propertyType)) {
+                    Map mapInstance = (Map)obj[simplePropertyName]
+                    if(mapInstance == null) {
+                        mapInstance = initializeMap obj, simplePropertyName, propertyType
+                    }
+                    mapInstance[indexedPropertyReferenceDescriptor.index] = val
                 }
             }
         }
@@ -188,6 +194,10 @@ class SimpleDataBinder implements DataBinder {
         }
     }
 
+    protected Map initializeMap(obj, String propertyName, Class type) {
+        obj[propertyName] = [:]
+    }
+    
     @CompileStatic(TypeCheckingMode.SKIP)
     protected Collection initializeCollection(obj, String propertyName, Class type) {
         if(List.isAssignableFrom(type)) {
