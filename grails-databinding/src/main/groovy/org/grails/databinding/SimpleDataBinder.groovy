@@ -19,9 +19,8 @@ import groovy.transform.TypeCheckingMode
 import groovy.util.slurpersupport.GPathResult
 
 import java.lang.reflect.ParameterizedType
-import java.util.regex.Matcher
 
-import org.codehaus.groovy.classgen.Verifier.DefaultArgsAction;
+import org.apache.commons.collections.set.ListOrderedSet
 import org.grails.databinding.converters.BooleanConversionHelper
 import org.grails.databinding.converters.ByteConversionHelper
 import org.grails.databinding.converters.CharConversionHelper
@@ -138,13 +137,19 @@ class SimpleDataBinder implements DataBinder {
                     def indexedInstance = collectionInstance[index]
                     if(indexedInstance == null) {
                         Class genericType = getReferencedTypeForCollection(simplePropertyName, obj)
-                        indexedInstance = genericType.newInstance()
-                        addElementToCollectionAt collectionInstance, index, indexedInstance
+                        if(genericType) {
+                            indexedInstance = genericType.newInstance()
+                            addElementToCollectionAt collectionInstance, index, indexedInstance
+                        } else {
+                            addElementToCollectionAt collectionInstance, index, val
+                        }
                     }
-                    if(val instanceof Map) {
-                        bind indexedInstance, (Map)val, whiteList, blackList, listener
-                    } else if (val == null && indexedInstance != null) {
-                        addElementToCollectionAt collectionInstance, index, null
+                    if(indexedInstance != null) {
+                        if(val instanceof Map) {
+                            bind indexedInstance, (Map)val, whiteList, blackList, listener
+                        } else if (val == null && indexedInstance != null) {
+                            addElementToCollectionAt collectionInstance, index, null
+                        }
                     }
                 }
             }
@@ -164,13 +169,20 @@ class SimpleDataBinder implements DataBinder {
 
     @CompileStatic(TypeCheckingMode.SKIP)
     protected addElementToCollectionAt(Collection collection, index, val) {
-        collection[index] = val
+        // TODO
+        if(collection instanceof ListOrderedSet) {
+            collection.add index, val
+        } else {
+            collection[index] = val
+        }
     }
 
     @CompileStatic(TypeCheckingMode.SKIP)
     protected Collection initializeCollection(obj, String propertyName, Class type) {
         if(List.isAssignableFrom(type)) {
             obj[propertyName] = new ArrayList()
+        } else if (Set.isAssignableFrom(type)) {
+            obj[propertyName] = ListOrderedSet.decorate([] as Set)
         }
         obj[propertyName]
     }

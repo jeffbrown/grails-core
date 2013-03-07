@@ -104,6 +104,28 @@ class CollectionBindingSpec extends Specification {
         company.departments[2].name == 'Department Two'
         company.departments[2].numberOfEmployees == 99
     }
+    
+    void 'Test binding to an untyped List'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def dept = new Department()
+        
+        when:
+        binder.bind dept, ['listOfCodes[1]': 'Herman', 
+                           'listOfCodes[3]': 42,
+                           'setOfCodes[0]': 2112,
+                           'setOfCodes[1]': 'Rush']
+        
+        then:
+        dept.listOfCodes.size() == 4
+        dept.listOfCodes[0] == null
+        dept.listOfCodes[1] == 'Herman'
+        dept.listOfCodes[2] == null
+        dept.listOfCodes[3] == 42
+        dept.setOfCodes.size() == 2
+        dept.setOfCodes[0] == 2112
+        dept.setOfCodes[1] == 'Rush'
+    }
 }
 
 class Company {
@@ -114,4 +136,6 @@ class Company {
 class Department {
     String name
     Integer numberOfEmployees
+    List listOfCodes
+    Set setOfCodes
 }
