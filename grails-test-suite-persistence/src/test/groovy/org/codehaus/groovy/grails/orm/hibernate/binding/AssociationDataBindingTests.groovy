@@ -195,7 +195,7 @@ class AssociationBindingAuthor {
         session.clear()
         author = author.refresh()
 
-        def params = ["books[0].pages[0].id": "$page1.id"]
+        def params = ['books[0]': ['pages[0].id': "$page1.id"]]
 
         author.properties = params
 
@@ -232,7 +232,7 @@ class AssociationBindingAuthor {
         session.clear()
         book = book.refresh()
 
-        def params = ["pages[0].number": "1", "pages[1].number": "2", "pages[2].number": "3"]
+        def params = ['pages[0]': [number: '1'], 'pages[1]': [number: '2'], 'pages[2]': [number: '3']]
         book.properties = params
         assertEquals "Should bound new pages to book", 3, book.pages.size()
 

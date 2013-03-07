@@ -89,23 +89,23 @@ class SimpleDataBinder implements DataBinder {
     void bind(obj, Map<String, Object> source, List whiteList, List blackList, DataBindingListener listener) {
         def structuredPropertiesProcessed = []
         source.each {String propName, val ->
-            if(isOkToBind(propName, whiteList, blackList)) {
-                def isStructuredEditorProperty = false
-                def metaProperty = obj.metaClass.getMetaProperty propName
-                if(!metaProperty && propName.indexOf('_') > 0) {
-                    def simplePropName = propName[0..<propName.indexOf('_')]
-                    if(isOkToBind(simplePropName, whiteList, blackList)) {
-                        if(!structuredPropertiesProcessed.contains(simplePropName)) {
-                            structuredPropertiesProcessed << simplePropName
-                            metaProperty = obj.metaClass.getMetaProperty simplePropName
-                            if(metaProperty) {
-                                propName = simplePropName
-                                isStructuredEditorProperty = true
-                            }
+            def isStructuredEditorProperty = false
+            def metaProperty = obj.metaClass.getMetaProperty propName
+            if(!metaProperty && propName.indexOf('_') > 0) {
+                def simplePropName = propName[0..<propName.indexOf('_')]
+                if(isOkToBind(simplePropName, whiteList, blackList)) {
+                    if(!structuredPropertiesProcessed.contains(simplePropName)) {
+                        structuredPropertiesProcessed << simplePropName
+                        metaProperty = obj.metaClass.getMetaProperty simplePropName
+                        if(metaProperty) {
+                            propName = simplePropName
+                            isStructuredEditorProperty = true
                         }
                     }
                 }
-                if(metaProperty) {
+            }
+            if(metaProperty) {
+                if(isOkToBind(metaProperty.name, whiteList, blackList)) {
                     def propertyType = metaProperty.type
                     if(typeConverters.containsKey(propertyType)) {
                         def converter = typeConverters[propertyType]
@@ -114,20 +114,31 @@ class SimpleDataBinder implements DataBinder {
                         }
                     }
                     setPropertyValue obj, source, propName, val, listener
-                } else {
-                    processProperty obj, propName, val, source, whiteList, blackList, listener
                 }
+            } else {
+                processProperty obj, propName, val, source, whiteList, blackList, listener
             }
         }
     }
 
-    protected processProperty(obj, String propName, val, Map source, List whiteList, List blackList, DataBindingListener listener) {
+    protected IndexedPropertyReferenceDescriptor getIndexedPropertyReferenceDescriptor(propName) {
+        IndexedPropertyReferenceDescriptor descriptor
         def matcher = propName =~ INDEXED_PROPERTY_REGEX
         if(matcher) {
-            def simplePropertyName = matcher.group(1)
+            def indexedPropertyName = matcher.group(1)
+            def index = Integer.parseInt(matcher.group(2))
+            descriptor = new IndexedPropertyReferenceDescriptor(propertyName: indexedPropertyName, index: index)
+        }
+        descriptor
+    }
+    
+    protected processProperty(obj, String propName, val, Map source, List whiteList, List blackList, DataBindingListener listener) {
+        def indexedPropertyReferenceDescriptor = getIndexedPropertyReferenceDescriptor propName
+        if(indexedPropertyReferenceDescriptor) {
+            def simplePropertyName = indexedPropertyReferenceDescriptor.propertyName
             def metaProperty = obj.metaClass.getMetaProperty simplePropertyName
-            if(metaProperty) {
-                def index = Integer.parseInt(matcher.group(2))
+            if(metaProperty && isOkToBind(metaProperty.name, whiteList, blackList)) {
+                def index = indexedPropertyReferenceDescriptor.index
                 def propertyType = metaProperty.type
                 if(Collection.isAssignableFrom(propertyType)) {
                     Collection collectionInstance = (Collection)obj[simplePropertyName]
@@ -146,7 +157,7 @@ class SimpleDataBinder implements DataBinder {
                     }
                     if(indexedInstance != null) {
                         if(val instanceof Map) {
-                            bind indexedInstance, (Map)val, whiteList, blackList, listener
+                            bind indexedInstance, (Map)val, listener
                         } else if (val == null && indexedInstance != null) {
                             addElementToCollectionAt collectionInstance, index, null
                         }
@@ -165,7 +176,7 @@ class SimpleDataBinder implements DataBinder {
             contentType = ((ParameterizedType)genericType).getActualTypeArguments()[0]
         }
         contentType
-	}
+    }
 
     @CompileStatic(TypeCheckingMode.SKIP)
     protected addElementToCollectionAt(Collection collection, index, val) {

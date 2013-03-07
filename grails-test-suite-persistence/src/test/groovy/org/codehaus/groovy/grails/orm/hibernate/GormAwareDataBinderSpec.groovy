@@ -32,9 +32,14 @@ class GormAwareDataBinderSpec extends GormSpec {
         then:
         publication.title == 'Infinite Jest'
         publication.author.name == 'David Foster Wallace'
+        
+        when:
+        binder.bind publication, ['author.id': 'null']
+        
+        then:
+        publication.author == null
 
         when:
-        publication.author = null
         publication.title = null
         binder.bind publication, [title: 'Infinite Jest', 'author.id': author.id], [], ['author']
 
@@ -64,9 +69,22 @@ class GormAwareDataBinderSpec extends GormSpec {
         publisher.publications[2].author.name == 'Jeff'
     }
 
+    void 'Test bindable'() {
+        given:
+        def binder = new GormAwareDataBinder()
+        def widget = new Widget()
+        
+        when:
+        binder.bind widget, [isBindable: 'Should Be Bound', isNotBindable: 'Should Not Be Bound']
+        
+        then:
+        widget.isBindable == 'Should Be Bound'
+        widget.isNotBindable == null
+    }
+    
     @Override
     List getDomainClasses() {
-        [Publication, Author, Publisher]
+        [Publication, Author, Publisher, Widget]
     }
 }
 
@@ -86,4 +104,14 @@ class Publication {
 @Entity
 class Author {
     String name
+}
+
+@Entity
+class Widget {
+    String isBindable
+    String isNotBindable
+    
+    static constraints = {
+        isNotBindable bindable: false
+    }
 }
