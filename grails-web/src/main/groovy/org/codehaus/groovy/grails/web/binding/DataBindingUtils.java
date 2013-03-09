@@ -37,7 +37,10 @@ import org.codehaus.groovy.grails.commons.GrailsDomainClass;
 import org.codehaus.groovy.grails.commons.GrailsDomainClassProperty;
 import org.codehaus.groovy.grails.web.servlet.mvc.GrailsParameterMap;
 import org.codehaus.groovy.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.databinding.DataBinder;
+import org.grails.databinding.events.DataBindingListener;
 import org.springframework.beans.MutablePropertyValues;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
@@ -197,11 +200,22 @@ public class DataBindingUtils {
             bindingResult = dataBinder.getBindingResult();
         }
         else if (source instanceof Map) {
-            Map propertyMap = (Map)source;
-            propertyMap = convertPotentialGStrings(propertyMap);
-            GrailsDataBinder binder = createDataBinder(object, include, exclude, null);
-            performBindFromPropertyValues(binder, new MutablePropertyValues(propertyMap),filter);
-            bindingResult = binder.getBindingResult();
+            Map propertyMap = convertPotentialGStrings((Map)source);
+            // this flag is temporarily rigged up inline right here only
+            // to support switching the new binder on and off as we finish
+            // building it
+            boolean useNewBinder = false;
+            if(useNewBinder) {
+                final DataBinder gormAwareDataBinder = new GormAwareDataBinder(GrailsWebRequest.lookupApplication());
+                final BindingResult tmpBindingResult = new BeanPropertyBindingResult(object, object.getClass().getName());
+                DataBindingListener listener = new GormAwareDataBindindingListener(tmpBindingResult, object);
+                gormAwareDataBinder.bind(object, propertyMap, include, exclude, listener);
+                bindingResult = tmpBindingResult;
+            } else {
+                GrailsDataBinder binder = createDataBinder(object, include, exclude, null);
+                performBindFromPropertyValues(binder, new MutablePropertyValues(propertyMap),filter);
+                bindingResult = binder.getBindingResult();
+            }
         }
         else {
             GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.getRequestAttributes();

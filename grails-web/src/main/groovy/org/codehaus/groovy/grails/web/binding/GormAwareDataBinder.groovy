@@ -1,5 +1,3 @@
-
-
 /* Copyright 2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,9 +35,13 @@ import org.grails.databinding.xml.GPathResultMap
 
 @CompileStatic
 class GormAwareDataBinder extends SimpleDataBinder {
-    private static final Map<Class, List> CLASS_TO_BINDING_INCLUDE_LIST = new ConcurrentHashMap<Class, List>()
-    GrailsApplication grailsApplication
+    protected static final Map<Class, List> CLASS_TO_BINDING_INCLUDE_LIST = new ConcurrentHashMap<Class, List>()
+    protected GrailsApplication grailsApplication
 
+    GormAwareDataBinder(GrailsApplication grailsApplication) {
+        this.grailsApplication = grailsApplication
+    }
+    
     void bind(obj, Map source) {
         bind obj, source, getBindingIncludeList(obj), null, null
     }
@@ -80,7 +82,7 @@ class GormAwareDataBinder extends SimpleDataBinder {
                     if(collection instanceof Collection) {
                         def referencedType = getReferencedTypeForCollection descriptor.propertyName, obj
                         if(referencedType) {
-                            addElementToCollectionAt (obj, descriptor.propertyName, collection, descriptor.index, 'null' == val ? null : InvokerHelper.invokeStaticMethod(referencedType, 'get', val.toString()))
+                            addElementToCollectionAt (obj, descriptor.propertyName, collection, Integer.parseInt(descriptor.index), 'null' == val ? null : InvokerHelper.invokeStaticMethod(referencedType, 'get', val.toString()))
                         }
                     }
                 }
@@ -125,9 +127,33 @@ class GormAwareDataBinder extends SimpleDataBinder {
 
     @Override
     protected addElementToCollectionAt(obj, String propertyName, Collection collection, index, val) {
-        def methodName = "addTo" + GrailsNameUtils.getClassName(propertyName)
-        if(GrailsMetaClassUtils.invokeMethodIfExists(obj, methodName, [val] as Object[]) == null) {
-            super.addElementToCollectionAt obj, propertyName, collection, index, val
+        super.addElementToCollectionAt obj, propertyName, collection, index, val
+
+        def domainClass = (GrailsDomainClass)grailsApplication.getArtefact('Domain', obj.getClass().name)
+        def property = domainClass.getPersistentProperty(propertyName);
+        if (property != null && property.isBidirectional()) {
+            def otherSide = property.getOtherSide();
+            if (otherSide.isManyToOne()) {
+                val[otherSide.name] = obj
+            }
+        }
+    }
+    
+    @Override
+    protected setPropertyValue(obj, Map source, String propName, propertyValue, DataBindingListener listener) {
+        super.setPropertyValue obj, source, propName, propertyValue, listener
+        def domainClass = (GrailsDomainClass)grailsApplication.getArtefact(DomainClassArtefactHandler.TYPE, obj.getClass().name)
+        if(domainClass != null) {
+            def property = domainClass.getPersistentProperty(propName)
+            if (property != null) {
+                def otherSide = property.getOtherSide();
+                if (otherSide != null && List.class.isAssignableFrom(otherSide.getType()) && !property.isOptional()) {
+                    if (otherSide.isOneToMany()) {
+                        def methodName = 'addTo' + GrailsNameUtils.getClassName(otherSide.name)
+                        GrailsMetaClassUtils.invokeMethodIfExists(obj[propName], methodName, [obj] as Object[])
+                    }
+                }
+            }
         }
     }
 }

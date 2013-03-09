@@ -22,7 +22,7 @@ class GormAwareDataBinderSpec extends GormSpec {
 
     void 'Test dotted id binding'() {
         given:
-        def binder = new GormAwareDataBinder()
+        def binder = new GormAwareDataBinder(grailsApplication)
         def author = new Author(name: 'David Foster Wallace').save(flush: true)
         def publication = new Publication()
 
@@ -48,9 +48,26 @@ class GormAwareDataBinderSpec extends GormSpec {
         publication.author == null
     }
 
+    void 'Test binding to the one side of a one to many'() {
+        given:
+        def binder = new GormAwareDataBinder(grailsApplication)
+        def author = new Author(name: 'Graeme')
+        def pub = new Publication(title: 'DGG', author: author)
+        
+        when:
+        binder.bind pub, [publisher: [name: 'Apress']]
+        
+        then:
+        pub.publisher.name == 'Apress'
+        pub.publisher.publications.size() == 1
+        
+        // this is what we are really testing...
+        pub.publisher.publications[0] == pub
+        
+    }
     void 'Test binding to a hasMany List'() {
         given:
-        def binder = new GormAwareDataBinder(grailsApplication: grailsApplication)
+        def binder = new GormAwareDataBinder(grailsApplication)
         def publisher = new Publisher()
 
         when:
@@ -72,7 +89,7 @@ class GormAwareDataBinderSpec extends GormSpec {
 
     void 'Test bindable'() {
         given:
-        def binder = new GormAwareDataBinder()
+        def binder = new GormAwareDataBinder(grailsApplication)
         def widget = new Widget()
         
         when:
