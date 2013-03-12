@@ -55,6 +55,7 @@ class AssociationBindingAuthor {
     }
 
     void testManyToOneBindingRespectsIncludes() {
+        super.buildMockRequest()
         def Book = ga.getDomainClass("AssociationBindingBook").clazz
         def Author = ga.getDomainClass("AssociationBindingAuthor").clazz
 
@@ -84,6 +85,7 @@ class AssociationBindingAuthor {
     }
 
     void testOneToManyListBindingNewInstanceRespectsIncludes() {
+        super.buildMockRequest()
         def Book = ga.getDomainClass("AssociationBindingBook").clazz
         def Author = ga.getDomainClass("AssociationBindingAuthor").clazz
         def Page = ga.getDomainClass("AssociationBindingPage").clazz

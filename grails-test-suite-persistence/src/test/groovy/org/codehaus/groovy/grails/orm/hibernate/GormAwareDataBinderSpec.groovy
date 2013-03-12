@@ -51,11 +51,18 @@ class GormAwareDataBinderSpec extends GormSpec {
     void 'Test binding to the one side of a one to many'() {
         given:
         def binder = new GormAwareDataBinder(grailsApplication)
-        def author = new Author(name: 'Graeme')
+        def author = new Author(name: 'Graeme').save()
         def pub = new Publication(title: 'DGG', author: author)
         
         when:
         binder.bind pub, [publisher: [name: 'Apress']]
+        def publisher = pub.publisher
+        
+        then:
+        publisher != null
+        
+        when:
+        publisher.save()
         
         then:
         pub.publisher.name == 'Apress'

@@ -58,7 +58,7 @@ class DataBindingAutoCreationBook {
         session.clear()
         book = book.refresh()
 
-        def params = ['author.name':"Stephen King"]
+        def params = [author: [name: 'Stephen King']]
         book.properties['author.name', 'title'] = params
 
         assertEquals "The author should have been auto-created, and name should have been bound",

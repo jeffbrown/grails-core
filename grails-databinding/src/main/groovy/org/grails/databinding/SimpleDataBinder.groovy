@@ -63,37 +63,53 @@ class SimpleDataBinder implements DataBinder {
     }
 
     void bind(obj, Map source) {
-        bind obj, source, null, null, null
+        bind obj, source, null, null, null, null
+    }
+
+    void bind(obj, String prefix, Map source) {
+        bind obj, null, prefix, source, null, null, null
     }
 
     void bind(obj, Map source, DataBindingListener listener) {
-        bind obj, source, null, null, listener
+        bind obj, source, null, null, null, listener
     }
 
     void bind(obj, Map source, List whiteList) {
-        bind obj, source, whiteList, null, null
+        bind obj, source, null, whiteList, null, null
     }
 
     void bind(obj, Map source, List whiteList, List blackList) {
-        bind obj, source, whiteList, blackList, null
+        bind obj, source, null, whiteList, blackList, null
     }
 
     void bind(obj, GPathResult gpath) {
         bind obj, new GPathResultMap(gpath)
     }
 
-    protected isOkToBind(String propName, List whiteList, List blackList) {
-        !blackList?.contains(propName) && (!whiteList || whiteList.contains(propName))
+    protected isOkToBind(String propName, String prefix, List whiteList, List blackList) {
+        def prefixedName = prefix ? prefix + '.' + propName : propName
+        
+        'metaClass' != propName && !blackList?.contains(prefixedName) && (!whiteList || whiteList.contains(prefixedName) || whiteList.find { String it -> it.startsWith(prefixedName + '.')})
     }
 
-    void bind(obj, Map<String, Object> source, List whiteList, List blackList, DataBindingListener listener) {
+    void bind(obj, Map<String, Object> source, String filter, List whiteList, List blackList, DataBindingListener listener) {
+        bind obj, filter, '', source, whiteList, blackList, listener
+    }
+    
+    void bind(obj, String filter, String prefix, Map<String, Object> source, List whiteList, List blackList, DataBindingListener listener) {
         def structuredPropertiesProcessed = []
         source.each {String propName, val ->
+            if(filter && !propName.startsWith(filter + '.')) {
+                return
+            }
+            if(filter) {
+                propName = propName[(1+filter.size())..-1]
+            }
             def isStructuredEditorProperty = false
             def metaProperty = obj.metaClass.getMetaProperty propName
             if(!metaProperty && propName.indexOf('_') > 0) {
                 def simplePropName = propName[0..<propName.indexOf('_')]
-                if(isOkToBind(simplePropName, whiteList, blackList)) {
+                if(isOkToBind(simplePropName, prefix, whiteList, blackList)) {
                     if(!structuredPropertiesProcessed.contains(simplePropName)) {
                         structuredPropertiesProcessed << simplePropName
                         metaProperty = obj.metaClass.getMetaProperty simplePropName
@@ -105,7 +121,7 @@ class SimpleDataBinder implements DataBinder {
                 }
             }
             if(metaProperty) {
-                if(isOkToBind(metaProperty.name, whiteList, blackList)) {
+                if(isOkToBind(metaProperty.name, prefix, whiteList, blackList)) {
                     def propertyType = metaProperty.type
                     if(typeConverters.containsKey(propertyType)) {
                         def converter = typeConverters[propertyType]
@@ -113,10 +129,13 @@ class SimpleDataBinder implements DataBinder {
                             val = typeConverters[propertyType].convertValue obj, propName, source
                         }
                     }
-                    setPropertyValue obj, source, propName, val, listener
+                    // TODO this 'if' is a temporary hack
+                    if('struct' != val) {
+                        setPropertyValue obj, source, propName, prefix, val, listener
+                    }
                 }
             } else {
-                processProperty obj, propName, val, source, whiteList, blackList, listener
+                processProperty obj, propName, prefix, val, source, whiteList, blackList, listener
             }
         }
     }
@@ -132,12 +151,12 @@ class SimpleDataBinder implements DataBinder {
         descriptor
     }
     
-    protected processProperty(obj, String propName, val, Map source, List whiteList, List blackList, DataBindingListener listener) {
+    protected processProperty(obj, String propName, String prefix, val, Map source, List whiteList, List blackList, DataBindingListener listener) {
         def indexedPropertyReferenceDescriptor = getIndexedPropertyReferenceDescriptor propName
         if(indexedPropertyReferenceDescriptor) {
             def simplePropertyName = indexedPropertyReferenceDescriptor.propertyName
             def metaProperty = obj.metaClass.getMetaProperty simplePropertyName
-            if(metaProperty && isOkToBind(metaProperty.name, whiteList, blackList)) {
+            if(metaProperty && isOkToBind(metaProperty.name, prefix, whiteList, blackList)) {
                 def propertyType = metaProperty.type
                 if(Collection.isAssignableFrom(propertyType)) {
                     def index = Integer.parseInt(indexedPropertyReferenceDescriptor.index)
@@ -248,7 +267,7 @@ class SimpleDataBinder implements DataBinder {
         converter
     }
 
-    protected setPropertyValue(obj, Map source, String propName, propertyValue, DataBindingListener listener) {
+    protected setPropertyValue(obj, Map source, String propName, String prefix, propertyValue, DataBindingListener listener) {
         def converter = getValueConverter obj, propName
 
         if(converter) {
@@ -267,6 +286,11 @@ class SimpleDataBinder implements DataBinder {
 
             if(propertyValue == null || propertyType == Object || propertyType.isAssignableFrom(propertyValue.getClass())) {
                 obj[propName] = propertyValue
+            } else if(propertyValue instanceof List && 
+//                      !propertyValue instanceof ListOrderedSet &&
+                      Set.isAssignableFrom(propertyType) &&
+                      !SortedSet.isAssignableFrom(propertyType)) {
+                obj[propName] = ListOrderedSet.decorate(propertyValue)
             } else {
                 try {
                     if(propertyValue instanceof Map) {
@@ -283,7 +307,7 @@ class SimpleDataBinder implements DataBinder {
                 }
             }
         } else if(listener != null && propertyValue instanceof Map && obj[propName] != null) {
-            bind obj[propName], propertyValue
+            bind obj[propName], propName + (prefix ? '.' + prefix : ''), propertyValue
         }
         listener?.afterBinding obj, propName
     }

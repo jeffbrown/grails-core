@@ -21,7 +21,7 @@ import org.grails.databinding.events.DataBindingListener;
 
 public interface DataBinder {
 
-    void bind(Object obj, Map<String, Object> source, List<String> whiteList,
+    void bind(Object obj, Map<String, Object> source, String filter, List<String> whiteList,
             List<String> blackList, DataBindingListener listener);
 
 }

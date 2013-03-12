@@ -16,6 +16,7 @@ package org.codehaus.groovy.grails.web.binding
 
 import grails.util.Environment
 import grails.util.GrailsNameUtils
+import grails.validation.DeferredBindingActions
 import groovy.transform.CompileStatic
 import groovy.util.slurpersupport.GPathResult
 
@@ -43,11 +44,11 @@ class GormAwareDataBinder extends SimpleDataBinder {
     }
     
     void bind(obj, Map source) {
-        bind obj, source, getBindingIncludeList(obj), null, null
+        bind obj, source, null, getBindingIncludeList(obj), null, null
     }
 
     void bind(obj, Map source, DataBindingListener listener) {
-        bind obj, source, getBindingIncludeList(obj), null, listener
+        bind obj, source, null, getBindingIncludeList(obj), null, listener
     }
 
     void bind(obj, GPathResult gpath) {
@@ -71,7 +72,7 @@ class GormAwareDataBinder extends SimpleDataBinder {
     }
 
     @Override
-    protected processProperty(obj, String propName, val, Map source,  List whiteList, List blackList, DataBindingListener listener) {
+    protected processProperty(obj, String propName, String prefix, val, Map source,  List whiteList, List blackList, DataBindingListener listener) {
         if(propName.endsWith('.id')) {
             def simplePropName = propName[0..-4]
             def descriptor = getIndexedPropertyReferenceDescriptor simplePropName
@@ -87,16 +88,16 @@ class GormAwareDataBinder extends SimpleDataBinder {
                     }
                 }
             } else {
-                if(isOkToBind(simplePropName, whiteList, blackList)) {
+                if(isOkToBind(simplePropName, prefix, whiteList, blackList)) {
                     def metaProperty = obj.metaClass.getMetaProperty simplePropName
                     if(metaProperty) {
                         def persistedInstance = 'null' == val ? null : InvokerHelper.invokeStaticMethod(((MetaBeanProperty)metaProperty).field.type, 'get', val)
-                        setPropertyValue obj, source, simplePropName, persistedInstance, listener
+                        setPropertyValue obj, source, simplePropName, prefix, persistedInstance, listener
                     }
                 }
             }
         } else {
-            super.processProperty obj, propName, val, source, whiteList, blackList, listener
+            super.processProperty obj, propName, prefix, val, source, whiteList, blackList, listener
         }
     }
 
@@ -129,28 +130,40 @@ class GormAwareDataBinder extends SimpleDataBinder {
     protected addElementToCollectionAt(obj, String propertyName, Collection collection, index, val) {
         super.addElementToCollectionAt obj, propertyName, collection, index, val
 
-        def domainClass = (GrailsDomainClass)grailsApplication.getArtefact('Domain', obj.getClass().name)
-        def property = domainClass.getPersistentProperty(propertyName);
-        if (property != null && property.isBidirectional()) {
-            def otherSide = property.getOtherSide();
-            if (otherSide.isManyToOne()) {
-                val[otherSide.name] = obj
+        if(grailsApplication != null) {
+            def domainClass = (GrailsDomainClass)grailsApplication.getArtefact('Domain', obj.getClass().name)
+            def property = domainClass.getPersistentProperty(propertyName);
+            if (property != null && property.isBidirectional()) {
+                def otherSide = property.getOtherSide();
+                if (otherSide.isManyToOne()) {
+                    val[otherSide.name] = obj
+                }
             }
         }
     }
-    
+
     @Override
-    protected setPropertyValue(obj, Map source, String propName, propertyValue, DataBindingListener listener) {
-        super.setPropertyValue obj, source, propName, propertyValue, listener
-        def domainClass = (GrailsDomainClass)grailsApplication.getArtefact(DomainClassArtefactHandler.TYPE, obj.getClass().name)
-        if(domainClass != null) {
-            def property = domainClass.getPersistentProperty(propName)
-            if (property != null) {
-                def otherSide = property.getOtherSide();
-                if (otherSide != null && List.class.isAssignableFrom(otherSide.getType()) && !property.isOptional()) {
-                    if (otherSide.isOneToMany()) {
-                        def methodName = 'addTo' + GrailsNameUtils.getClassName(otherSide.name)
-                        GrailsMetaClassUtils.invokeMethodIfExists(obj[propName], methodName, [obj] as Object[])
+    protected setPropertyValue(obj, Map source, String propName, String prefix, propertyValue, DataBindingListener listener) {
+        super.setPropertyValue obj, source, propName, prefix, propertyValue, listener
+        if(grailsApplication != null) {
+            def domainClass = (GrailsDomainClass)grailsApplication.getArtefact(DomainClassArtefactHandler.TYPE, obj.getClass().name)
+            if(domainClass != null) {
+                def property = domainClass.getPersistentProperty(propName)
+                if (property != null) {
+                    def otherSide = property.getOtherSide();
+                    if (otherSide != null && List.class.isAssignableFrom(otherSide.getType()) && !property.isOptional()) {
+                        DeferredBindingActions.addBindingAction(
+                            new Runnable() {
+                                public void run() {
+                                    if (otherSide.isOneToMany()) {
+                                        Collection collection = GrailsMetaClassUtils.getPropertyIfExists(obj[propName], otherSide.name, Collection)
+                                        if (collection == null || !collection.contains(obj)) {
+                                            def methodName = 'addTo' + GrailsNameUtils.getClassName(otherSide.name)
+                                            GrailsMetaClassUtils.invokeMethodIfExists(obj[propName], methodName, [obj] as Object[])
+                                        }
+                                    }
+                                }
+                            })
                     }
                 }
             }

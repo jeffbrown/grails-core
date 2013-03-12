@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.codehaus.groovy.grails.commons.ApplicationAttributes;
 import org.codehaus.groovy.grails.commons.DomainClassArtefactHandler;
 import org.codehaus.groovy.grails.commons.GrailsApplication;
 import org.codehaus.groovy.grails.commons.GrailsDomainClass;
@@ -186,14 +187,14 @@ public class DataBindingUtils {
     public static BindingResult bindObjectToDomainInstance(GrailsDomainClass domain, Object object,
             Object source, List include, List exclude, String filter) {
         BindingResult bindingResult = null;
-        if (source instanceof GrailsParameterMap) {
+        if (/*source instanceof GrailsParameterMap) {
             GrailsParameterMap parameterMap = (GrailsParameterMap)source;
             HttpServletRequest request = parameterMap.getRequest();
             GrailsDataBinder dataBinder = createDataBinder(object, include, exclude, request);
             dataBinder.bind(parameterMap, filter);
             bindingResult = dataBinder.getBindingResult();
         }
-        else if (source instanceof HttpServletRequest) {
+        else if (*/source instanceof HttpServletRequest) {
             HttpServletRequest request = (HttpServletRequest)source;
             GrailsDataBinder dataBinder = createDataBinder(object, include, exclude, request);
             performBindFromRequest(dataBinder, request,filter);
@@ -206,10 +207,18 @@ public class DataBindingUtils {
             // building it
             boolean useNewBinder = false;
             if(useNewBinder) {
-                final DataBinder gormAwareDataBinder = new GormAwareDataBinder(GrailsWebRequest.lookupApplication());
+                GrailsApplication grailsApplication = null;
+                GrailsWebRequest webRequest = GrailsWebRequest.lookup();
+                if(webRequest != null) {
+                        ApplicationAttributes attributes = webRequest.getAttributes();
+                    if(attributes != null) {
+                        grailsApplication = attributes.getGrailsApplication();
+                    }
+                }
+                final DataBinder gormAwareDataBinder = new GormAwareDataBinder(grailsApplication);
                 final BindingResult tmpBindingResult = new BeanPropertyBindingResult(object, object.getClass().getName());
                 DataBindingListener listener = new GormAwareDataBindindingListener(tmpBindingResult, object);
-                gormAwareDataBinder.bind(object, propertyMap, include, exclude, listener);
+                gormAwareDataBinder.bind(object, propertyMap, filter, include, exclude, listener);
                 bindingResult = tmpBindingResult;
             } else {
                 GrailsDataBinder binder = createDataBinder(object, include, exclude, null);

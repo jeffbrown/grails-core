@@ -57,6 +57,8 @@ class GormAwareDataBindindingListener extends
                 "]: class path resource [" +
                 error.getRejectedValue() +
                 "] cannot be resolved to URL because it does not exist";
+            } else if(error.getCause() instanceof NumberFormatException) {
+                codes.add('typeMismatch')
             }
             ObjectError fieldError = new FieldError("", error.getPropertyName(), error.getRejectedValue(), true, codes.toArray(new String[0]), o, defaultMessage);
             tmpBindingResult.addError(fieldError);
