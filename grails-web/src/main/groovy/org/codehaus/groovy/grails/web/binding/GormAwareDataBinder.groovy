@@ -122,6 +122,15 @@ class GormAwareDataBinder extends SimpleDataBinder {
                 }
             }
         } else {
+            if(grailsApplication != null) {
+                def domainClass = (GrailsDomainClass)grailsApplication.getArtefact(DomainClassArtefactHandler.TYPE, obj.getClass().name)
+                if(domainClass != null) {
+                    def property = domainClass.getPersistentProperty(propName)
+                    if (property != null) {
+                        println property
+                    }
+                }
+            }
             super.processProperty obj, propName, prefix, val, source, whiteList, blackList, listener
         }
     }
@@ -169,12 +178,21 @@ class GormAwareDataBinder extends SimpleDataBinder {
 
     @Override
     protected setPropertyValue(obj, Map source, String propName, String prefix, propertyValue, DataBindingListener listener) {
-        super.setPropertyValue obj, source, propName, prefix, propertyValue, listener
+        boolean isSet = false
         if(grailsApplication != null) {
             def domainClass = (GrailsDomainClass)grailsApplication.getArtefact(DomainClassArtefactHandler.TYPE, obj.getClass().name)
             if(domainClass != null) {
                 def property = domainClass.getPersistentProperty(propName)
                 if (property != null) {
+                    if(Collection.isAssignableFrom(property.type)) {
+                        if(propertyValue instanceof String) {
+                            isSet = addElementWithIdToCollection(obj, propName, property, propertyValue)
+                        } else if(propertyValue instanceof String[]){
+                            propertyValue.each { val ->
+                                isSet = isSet | addElementWithIdToCollection(obj, propName, property, val)
+                            }
+                        }
+                    }
                     def otherSide = property.getOtherSide();
                     if (otherSide != null && List.class.isAssignableFrom(otherSide.getType()) && !property.isOptional()) {
                         DeferredBindingActions.addBindingAction(
@@ -193,5 +211,24 @@ class GormAwareDataBinder extends SimpleDataBinder {
                 }
             }
         }
+        if(!isSet) {
+            super.setPropertyValue obj, source, propName, prefix, propertyValue, listener
+        }
+    }
+
+    protected addElementWithIdToCollection(obj, String propName, GrailsDomainClassProperty property, propertyValue) {
+        boolean isSet = false
+        def coll = initializeCollection(obj, propName, property.type)
+        if(coll != null) {
+            def referencedType = getReferencedTypeForCollection(propName, obj)
+            if(referencedType != null) {
+                def persistentInstance = InvokerHelper.invokeStaticMethod(referencedType, 'get', propertyValue)
+                if(persistentInstance != null) {
+                    coll << persistentInstance
+                    isSet = true
+                }
+            }
+        }
+        isSet
     }
 }

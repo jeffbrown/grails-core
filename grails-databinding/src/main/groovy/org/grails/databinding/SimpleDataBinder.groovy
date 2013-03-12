@@ -219,10 +219,12 @@ class SimpleDataBinder implements DataBinder {
     
     @CompileStatic(TypeCheckingMode.SKIP)
     protected Collection initializeCollection(obj, String propertyName, Class type) {
-        if(List.isAssignableFrom(type)) {
-            obj[propertyName] = new ArrayList()
-        } else if (Set.isAssignableFrom(type)) {
-            obj[propertyName] = ListOrderedSet.decorate([] as Set)
+        if(obj[propertyName] == null) {
+            if(List.isAssignableFrom(type)) {
+                obj[propertyName] = new ArrayList()
+            } else if (Set.isAssignableFrom(type)) {
+                obj[propertyName] = ListOrderedSet.decorate([] as Set)
+            }
         }
         obj[propertyName]
     }
