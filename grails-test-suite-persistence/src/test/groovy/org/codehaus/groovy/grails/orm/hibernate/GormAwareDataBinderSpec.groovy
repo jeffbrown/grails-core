@@ -16,7 +16,9 @@ package org.codehaus.groovy.grails.orm.hibernate
 
 import grails.persistence.Entity
 
+import org.codehaus.groovy.grails.plugins.testing.GrailsMockHttpServletRequest
 import org.codehaus.groovy.grails.web.binding.GormAwareDataBinder
+import org.codehaus.groovy.grails.web.servlet.mvc.GrailsParameterMap
 
 class GormAwareDataBinderSpec extends GormSpec {
 
@@ -46,6 +48,14 @@ class GormAwareDataBinderSpec extends GormSpec {
         then:
         publication.title == 'Infinite Jest'
         publication.author == null
+        
+        when:
+        publication.author = null
+        binder.bind publication, [title: 'Infinite Jest 2', author: [id: author.id]]
+        
+        then:
+        publication.author.name == 'David Foster Wallace'
+        
     }
 
     void 'Test binding to the one side of a one to many'() {

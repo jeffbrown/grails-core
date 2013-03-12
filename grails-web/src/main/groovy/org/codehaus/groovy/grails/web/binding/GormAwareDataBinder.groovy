@@ -24,6 +24,7 @@ import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 
+import org.codehaus.groovy.grails.commons.AnnotationDomainClassArtefactHandler
 import org.codehaus.groovy.grails.commons.DomainClassArtefactHandler
 import org.codehaus.groovy.grails.commons.GrailsApplication
 import org.codehaus.groovy.grails.commons.GrailsDomainClass
@@ -70,6 +71,30 @@ class GormAwareDataBinder extends SimpleDataBinder {
         }
         referencedType ?: super.getReferencedTypeForCollection(name, target)
     }
+    
+    @Override
+    protected initializeProperty(obj, String propName, Class propertyType, Map<String, Object> source) {
+        def isInitialized = false
+        def isDomainClass = isDomainClass(propertyType)
+        if(isDomainClass && source.containsKey(propName)) {
+            def val = source[propName]
+            if(val instanceof Map && val.containsKey('id')) {
+                def persistentInstance = InvokerHelper.invokeStaticMethod(propertyType, 'get', val['id'])
+                if(persistentInstance != null) {
+                    obj[propName] = persistentInstance
+                    isInitialized = true
+                }
+            }
+        }
+        if(!isInitialized) {
+            super.initializeProperty obj, propName,  propertyType, source
+        }
+    }
+
+    protected boolean isDomainClass(final Class<?> clazz) {
+        return DomainClassArtefactHandler.isDomainClass(clazz) || AnnotationDomainClassArtefactHandler.isJPADomainClass(clazz);
+    }
+
 
     @Override
     protected processProperty(obj, String propName, String prefix, val, Map source,  List whiteList, List blackList, DataBindingListener listener) {

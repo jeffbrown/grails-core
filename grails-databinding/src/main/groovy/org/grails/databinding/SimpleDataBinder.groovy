@@ -294,7 +294,7 @@ class SimpleDataBinder implements DataBinder {
             } else {
                 try {
                     if(propertyValue instanceof Map) {
-                        initializeProperty(obj, propName, propertyType)
+                        initializeProperty(obj, propName, propertyType, source)
                         bind obj[propName], propertyValue
                     } else {
                         obj[propName] = convert(propertyType, propertyValue)
@@ -312,7 +312,7 @@ class SimpleDataBinder implements DataBinder {
         listener?.afterBinding obj, propName
     }
 
-    protected initializeProperty(obj, String propName, Class propertyType) {
+    protected initializeProperty(obj, String propName, Class propertyType, Map<String, Object> source) {
         obj[propName] = propertyType.newInstance()
     }
 
