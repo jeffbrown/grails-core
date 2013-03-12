@@ -150,6 +150,20 @@ class GPathResultMapSpec extends Specification {
         then:
         keys.size() == 1
         'name' in keys
+        
+        when:
+        xml = new XmlSlurper().parseText('''<person>
+        <name>John Doe</name>
+        <location id="1">
+        <shippingAddress>foo</shippingAddress>
+        <billingAddress>bar</billingAddress>
+        </location>
+        </person>''')
+        map = new GPathResultMap(xml)
+        
+        then:
+        map.location.id == '1'
+        
     }
     
     void 'Test empty Map'() {

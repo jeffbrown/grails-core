@@ -51,6 +51,9 @@ class GPathResultMap implements Map {
             def value = get name
             entries << new AbstractMap.SimpleImmutableEntry(name, value)
         }
+        if(this.@id != null) {
+            entries << new AbstractMap.SimpleImmutableEntry('id', this.@id)
+        }
         return entries
     }
 
@@ -66,7 +69,6 @@ class GPathResultMap implements Map {
                 def theId = it.@id.text()
                 if(!''.equals(theId)) {
                     def theMap = new GPathResultMap(it)
-                    theMap.@id = theId
                     list << theMap   
                 } else {
                     if(it.children().size() > 0) {
