@@ -19,9 +19,11 @@ import groovy.util.slurpersupport.GPathResult
 
 class GPathResultMap implements Map {
     private GPathResult gpath
+    private id
 
     GPathResultMap(GPathResult gpath) {
         this.gpath = gpath
+        this.@id = gpath.@id.text() ?: null
     }
 
     @Override
@@ -35,6 +37,9 @@ class GPathResultMap implements Map {
 
     @Override
     public boolean containsKey(Object key) {
+        if(key == 'id') {
+            return this.@id != null
+        }
         gpath[key].size()
     }
 
@@ -51,22 +56,41 @@ class GPathResultMap implements Map {
 
     @Override
     public Object get(Object key) {
+        if('id' == key && this.@id) {
+            return this.@id
+        }
         def value = gpath[key]
         if(value.size() > 1) {
             def list = []
             value.iterator().each {
-                list << it.text()
+                def theId = it.@id.text()
+                if(!''.equals(theId)) {
+                    def theMap = new GPathResultMap(it)
+                    theMap.@id = theId
+                    list << theMap   
+                } else {
+                    if(it.children().size() > 0) {
+                        def theMap = new GPathResultMap(it)
+                        list << theMap
+                    } else {
+                        list << it.text()
+                    }
+                }
             }
             return list
         } else if(value.children().size() == 0) {
             return value.text()
         }
-        return new GPathResultMap(value)
+        new GPathResultMap(value)
     }
 
     @Override
     public Set keySet() {
-        gpath.children().collect { it.name() } as Set
+        def keys = gpath.children().collect { it.name() } as Set
+        if(this.@id != null) {
+            keys << 'id'
+        }
+        keys
     }
 
     @Override

@@ -83,6 +83,75 @@ class GPathResultMapSpec extends Specification {
         'country' in keys
     }
 
+    void 'Test id attributes'() {
+        given:
+        def xml = new XmlSlurper().parseText('''
+<music>
+    <band id="4">
+        <name>Thin Lizzy</name>
+        <members>
+            <member id="1">
+                <name>Phil</name>
+            </member>
+            <member id="2">
+                <name>Scott</name>
+            </member>
+            <member>
+                <name>John</name>
+            </member>
+        </members>
+    </band>
+</music>
+''')
+        
+        when:
+        def map = new GPathResultMap(xml)
+        
+        then:
+        map.band.id == '4'
+        map.band.name == 'Thin Lizzy'
+        
+        when:
+        def members = map.band.members
+        
+        then:
+        members instanceof Map
+        members.size() == 1
+        members.member instanceof List
+        members.member.size() == 3
+        members.member[0].containsKey 'id'
+        members.member[0].id == '1'
+        members.member[0].name == 'Phil'
+        members.member[1].containsKey 'id'
+        members.member[1].id == '2'
+        members.member[1].name == 'Scott'
+        !members.member[2].containsKey('id')
+        members.member[2].name == 'John'
+        
+        when:
+        def keys = members.member[0].keySet()
+        
+        then:
+        keys.size() == 2
+        'id' in keys
+        'name' in keys
+        
+        when:
+        keys = members.member[1].keySet()
+        
+        then:
+        keys.size() == 2
+        'id' in keys
+        'name' in keys
+        
+        when:
+        keys = members.member[2].keySet()
+        
+        then:
+        keys.size() == 1
+        'name' in keys
+    }
+    
     void 'Test empty Map'() {
         given:
         def xml = new XmlSlurper().parseText('''
