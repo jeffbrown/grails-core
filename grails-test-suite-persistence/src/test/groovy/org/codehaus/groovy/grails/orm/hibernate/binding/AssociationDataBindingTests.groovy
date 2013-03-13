@@ -241,6 +241,22 @@ class AssociationBindingAuthor {
         book.save(flush: true, failOnError: true)
         assertEquals "Should have created new pages", 3, Page.count()
     }
+    
+    void testMapBindingById() {
+        super.buildMockRequest()
+        def Reviewer = ga.getDomainClass("AssociationBindingReviewer").clazz
+        def Book = ga.getDomainClass("AssociationBindingBook").clazz
+        
+        def r1 = Reviewer.newInstance(name: 'Reviewer One').save(failOnError: true)
+        def r2 = Reviewer.newInstance(name: 'Reviewer Two').save(failOnError: true)
+        def b = Book.newInstance()
+        def params = ['reviewers[dos].id': "${r2.id}", 'reviewers[uno].id': "${r1.id}"]
+        b.properties = params
+        
+        assertEquals b.reviewers.size(), 2
+        assertEquals 'Reviewer One', b.reviewers.uno.name
+        assertEquals 'Reviewer Two', b.reviewers.dos.name
+    }
 
     void testOneToManyMapUnBindingWithSubscriptOperator() {
         super.buildMockRequest()

@@ -184,7 +184,7 @@ class SimpleDataBinder implements DataBinder {
                 } else if(Map.isAssignableFrom(propertyType)) {
                     Map mapInstance = (Map)obj[simplePropertyName]
                     if(mapInstance == null) {
-                        mapInstance = initializeMap obj, simplePropertyName, propertyType
+                        mapInstance = initializeMap obj, simplePropertyName
                     }
                     mapInstance[indexedPropertyReferenceDescriptor.index] = val
                 }
@@ -213,8 +213,11 @@ class SimpleDataBinder implements DataBinder {
         }
     }
 
-    protected Map initializeMap(obj, String propertyName, Class type) {
-        obj[propertyName] = [:]
+    protected Map initializeMap(obj, String propertyName) {
+        if(obj[propertyName] == null) {
+            obj[propertyName] = [:]
+        }
+        obj[propertyName]
     }
     
     @CompileStatic(TypeCheckingMode.SKIP)
