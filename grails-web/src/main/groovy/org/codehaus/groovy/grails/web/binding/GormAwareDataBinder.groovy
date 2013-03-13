@@ -79,7 +79,7 @@ class GormAwareDataBinder extends SimpleDataBinder {
         if(isDomainClass && source.containsKey(propName)) {
             def val = source[propName]
             if(val instanceof Map && val.containsKey('id')) {
-                def persistentInstance = InvokerHelper.invokeStaticMethod(propertyType, 'get', val['id'])
+                def persistentInstance = getPersistentInstance(propertyType, val['id'])
                 if(persistentInstance != null) {
                     obj[propName] = persistentInstance
                     isInitialized = true
@@ -89,6 +89,10 @@ class GormAwareDataBinder extends SimpleDataBinder {
         if(!isInitialized) {
             super.initializeProperty obj, propName,  propertyType, source
         }
+    }
+    
+    protected getPersistentInstance(Class<?> type, id) {
+        InvokerHelper.invokeStaticMethod(type, 'get', id)
     }
 
     protected boolean isDomainClass(final Class<?> clazz) {
@@ -108,7 +112,7 @@ class GormAwareDataBinder extends SimpleDataBinder {
                     if(collection instanceof Collection) {
                         def referencedType = getReferencedTypeForCollection descriptor.propertyName, obj
                         if(referencedType) {
-                            addElementToCollectionAt (obj, descriptor.propertyName, collection, Integer.parseInt(descriptor.index), 'null' == val ? null : InvokerHelper.invokeStaticMethod(referencedType, 'get', val.toString()))
+                            addElementToCollectionAt (obj, descriptor.propertyName, collection, Integer.parseInt(descriptor.index), 'null' == val ? null : getPersistentInstance(referencedType, val.toString()))
                         }
                     }
                 }
@@ -116,7 +120,7 @@ class GormAwareDataBinder extends SimpleDataBinder {
                 if(isOkToBind(simplePropName, prefix, whiteList, blackList)) {
                     def metaProperty = obj.metaClass.getMetaProperty simplePropName
                     if(metaProperty) {
-                        def persistedInstance = 'null' == val ? null : InvokerHelper.invokeStaticMethod(((MetaBeanProperty)metaProperty).field.type, 'get', val)
+                        def persistedInstance = 'null' == val ? null : getPersistentInstance(((MetaBeanProperty)metaProperty).field.type, val)
                         setPropertyValue obj, source, simplePropName, prefix, persistedInstance, listener
                     }
                 }
@@ -222,7 +226,7 @@ class GormAwareDataBinder extends SimpleDataBinder {
         if(coll != null) {
             def referencedType = getReferencedTypeForCollection(propName, obj)
             if(referencedType != null) {
-                def persistentInstance = InvokerHelper.invokeStaticMethod(referencedType, 'get', propertyValue)
+                def persistentInstance = getPersistentInstance(referencedType, propertyValue)
                 if(persistentInstance != null) {
                     coll << persistentInstance
                     isSet = true
