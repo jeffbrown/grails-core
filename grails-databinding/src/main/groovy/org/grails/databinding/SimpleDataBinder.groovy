@@ -135,7 +135,9 @@ class SimpleDataBinder implements DataBinder {
                     }
                 }
             } else {
-                processProperty obj, propName, prefix, val, source, whiteList, blackList, listener
+                if(!(val instanceof Map && val.size() == 1 && val.containsKey('id'))) {
+                    processProperty obj, propName, prefix, val, source, whiteList, blackList, listener
+                }
             }
         }
     }
@@ -207,7 +209,7 @@ class SimpleDataBinder implements DataBinder {
     protected addElementToCollectionAt(obj, String propertyName, Collection collection, index, val) {
         // TODO
         if(collection instanceof ListOrderedSet) {
-            collection.add index, val
+            collection.add Math.min(index, collection.size()), val
         } else {
             collection[index] = val
         }
@@ -324,6 +326,12 @@ class SimpleDataBinder implements DataBinder {
     protected convert(Class typeToConvertTo, value) {
         if(conversionHelpers.containsKey(typeToConvertTo)) {
             return conversionHelpers.get(typeToConvertTo).convert(value)
+        } else if(Collection.isAssignableFrom(typeToConvertTo) && value instanceof String[]) {
+            if(Set == typeToConvertTo) {
+                return value as Set
+            } else if(List == typeToConvertTo) {
+                return value as List
+            }
         }
         typeToConvertTo.newInstance value
     }

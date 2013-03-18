@@ -102,6 +102,21 @@ class SimpleDataBindingSpec extends Specification {
         w.epsilon == 42
     }
 
+    void 'Test binding array of String to a Set of Strings'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def obj = new Widget()
+        
+        when:
+        binder.bind obj, [widgetChildren: ['Child 1', 'Child 2', 'Child 3'] as String[]]
+        
+        then:
+        3 == obj.widgetChildren?.size()
+        'Child 1' in obj.widgetChildren
+        'Child 2' in obj.widgetChildren
+        'Child 3' in obj.widgetChildren
+    }
+
     void 'Test binding to primitives from Strings'() {
         given:
         def binder = new SimpleDataBinder()
@@ -204,6 +219,7 @@ class Widget {
     def beta
     Integer delta
     Number epsilon
+    Set<String> widgetChildren
 }
 
 class Gadget extends Widget {
