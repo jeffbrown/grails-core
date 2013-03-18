@@ -187,20 +187,16 @@ public class DataBindingUtils {
     public static BindingResult bindObjectToDomainInstance(GrailsDomainClass domain, Object object,
             Object source, List include, List exclude, String filter) {
         BindingResult bindingResult = null;
-        // this flag is temporarily rigged up inline right here only
-        // to support switching the new binder on and off as we finish
-        // building it
-        boolean useNewBinder = true;
-        if (useNewBinder) {
-            Map propertyMap = convertPotentialGStrings((Map) source);
-            GrailsApplication grailsApplication = null;
-            GrailsWebRequest webRequest = GrailsWebRequest.lookup();
-            if (webRequest != null) {
-                ApplicationAttributes attributes = webRequest.getAttributes();
-                if (attributes != null) {
-                    grailsApplication = attributes.getGrailsApplication();
-                }
+        // setting this inline temporarily here for now...
+        boolean useNewBinder = false;
+        final GrailsApplication grailsApplication = GrailsWebRequest.lookupApplication();
+        if(grailsApplication != null) {
+            if(Boolean.TRUE.equals(grailsApplication.getFlatConfig().get("grails.databinding.useNewBinder"))) {
+                useNewBinder = true;
             }
+        }
+        if (useNewBinder && source instanceof Map) {
+            Map propertyMap = convertPotentialGStrings((Map) source);
             final DataBinder gormAwareDataBinder = new GormAwareDataBinder(grailsApplication);
             final BindingResult tmpBindingResult = new BeanPropertyBindingResult(object, object.getClass().getName());
             DataBindingListener listener = new GormAwareDataBindindingListener(tmpBindingResult, object);
