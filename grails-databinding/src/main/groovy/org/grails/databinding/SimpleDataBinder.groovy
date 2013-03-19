@@ -97,7 +97,6 @@ class SimpleDataBinder implements DataBinder {
     }
     
     void bind(obj, String filter, String prefix, Map<String, Object> source, List whiteList, List blackList, DataBindingListener listener) {
-        def structuredPropertiesProcessed = []
         source.each {String propName, val ->
             if(filter && !propName.startsWith(filter + '.')) {
                 return
@@ -105,34 +104,17 @@ class SimpleDataBinder implements DataBinder {
             if(filter) {
                 propName = propName[(1+filter.size())..-1]
             }
-            def isStructuredEditorProperty = false
             def metaProperty = obj.metaClass.getMetaProperty propName
-            if(!metaProperty && propName.indexOf('_') > 0) {
-                def simplePropName = propName[0..<propName.indexOf('_')]
-                if(isOkToBind(simplePropName, prefix, whiteList, blackList)) {
-                    if(!structuredPropertiesProcessed.contains(simplePropName)) {
-                        structuredPropertiesProcessed << simplePropName
-                        metaProperty = obj.metaClass.getMetaProperty simplePropName
-                        if(metaProperty) {
-                            propName = simplePropName
-                            isStructuredEditorProperty = true
-                        }
-                    }
-                }
-            }
             if(metaProperty) {
                 if(isOkToBind(metaProperty.name, prefix, whiteList, blackList)) {
                     def propertyType = metaProperty.type
                     if(typeConverters.containsKey(propertyType)) {
                         def converter = typeConverters[propertyType]
-                        if(!(converter instanceof DateConverter) || isStructuredEditorProperty) {
+                        if(!(converter instanceof StructuredDataConverter) || 'struct' == val) {
                             val = typeConverters[propertyType].convertValue obj, propName, source
                         }
                     }
-                    // TODO this 'if' is a temporary hack
-                    if('struct' != val) {
-                        setPropertyValue obj, source, propName, prefix, val, listener
-                    }
+                    setPropertyValue obj, source, propName, prefix, val, listener
                 }
             } else {
                 if(!(val instanceof Map && val.size() == 1 && val.containsKey('id'))) {

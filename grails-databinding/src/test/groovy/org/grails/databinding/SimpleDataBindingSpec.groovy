@@ -174,7 +174,10 @@ class SimpleDataBindingSpec extends Specification {
             calendar_year: '2049',
             sqlDate_month: '6',
             sqlDate_day: '14',
-            sqlDate_year: '1937'])
+            sqlDate_year: '1937',
+            sqlDate: 'struct',
+            calendar: 'struct',
+            utilDate: 'struct'])
         def utilDate = obj.utilDate
         def calendar = obj.calendar
         def sqlDate = obj.sqlDate
@@ -200,7 +203,10 @@ class SimpleDataBindingSpec extends Specification {
             calendar_year: '2049',
             sqlDate_month: '6',
             sqlDate_day: '14',
-            sqlDate_year: '1937'], null, ['sqlDate', 'utilDate'])
+            sqlDate_year: '1937',
+            sqlDate: 'struct',
+            calendar: 'struct',
+            utilDate: 'struct'], null, ['sqlDate', 'utilDate'])
         utilDate = obj.utilDate
         calendar = obj.calendar
         sqlDate = obj.sqlDate
@@ -212,6 +218,30 @@ class SimpleDataBindingSpec extends Specification {
         21 == calendar.get(Calendar.DATE)
         2049 == calendar.get(Calendar.YEAR)
     }
+    
+    void 'Test custom data converter'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def converter = new StringToGadgetConverter()
+        binder.registerTypeConverter Gadget, converter
+        def obj = new Widget()
+        
+        when:
+        binder.bind obj, [nestedGadget: [gamma: 'Some Gamma']]
+        
+        then:
+        'SOME GAMMA' == obj.nestedGadget.gamma
+    }
+}
+
+class StringToGadgetConverter implements DataConverter {
+
+    public Object convertValue(Object obj, String propertyName,
+            Map<String, Object> source) {
+        def gammaValue = source[propertyName]['gamma']
+        
+        new Gadget(gamma: gammaValue?.toUpperCase())
+    }
 }
 
 class Widget {
@@ -220,6 +250,7 @@ class Widget {
     Integer delta
     Number epsilon
     Set<String> widgetChildren
+    Gadget nestedGadget
 }
 
 class Gadget extends Widget {
