@@ -103,7 +103,7 @@ class GPathResultMapSpec extends Specification {
     </band>
 </music>
 ''')
-        
+
         when:
         def map = new GPathResultMap(xml)
         
@@ -163,7 +163,16 @@ class GPathResultMapSpec extends Specification {
         
         then:
         map.location.id == '1'
+
+        when:
+        xml = new XmlSlurper().parseText('''<foo>
+<bar id="1" />
+</foo>
+''')
+        map = new GPathResultMap(xml)
         
+        then:
+        map.bar.id == '1'
     }
     
     void 'Test empty Map'() {

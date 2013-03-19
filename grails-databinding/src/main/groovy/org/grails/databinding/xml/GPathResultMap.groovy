@@ -81,6 +81,9 @@ class GPathResultMap implements Map {
             }
             return list
         } else if(value.children().size() == 0) {
+            if(value.@id.text()) {
+                return [id: value.@id.text()]
+            }
             return value.text()
         }
         new GPathResultMap(value)
