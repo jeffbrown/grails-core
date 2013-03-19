@@ -52,7 +52,7 @@ class NullablePart {
 
         session.clear()
 
-        def part = Part.newInstance(name:"Intel CPU", 'item.id': item.id)
+        def part = Part.newInstance(name:"Intel CPU", item: [id: item.id])
 
         assert part.save(flush:true) != null
 
@@ -78,7 +78,7 @@ class NullablePart {
 
         session.clear()
 
-        def part = Part.newInstance(name:"Intel CPU", 'item.id': item.id)
+        def part = Part.newInstance(name:"Intel CPU", item: [id: item.id])
 
         assert part.save(flush:true) != null
 
@@ -126,7 +126,7 @@ class NullablePart {
 
         part = Part.get(part.id)
 
-        part.properties = ['item.id': item.id, name: 'New Intel CPU']
+        part.properties = [item: [id: item.id], name: 'New Intel CPU']
         part.save(flush: true)
 
         session.clear()
@@ -148,7 +148,7 @@ class NullablePart {
 
         session.clear()
 
-        Part.newInstance('item.id': item.id)
+        Part.newInstance(item: [id: item.id])
 
         session.flush()
         session.clear()

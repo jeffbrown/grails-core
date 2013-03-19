@@ -41,7 +41,7 @@ class SimpleDataBinder implements DataBinder {
     protected Map<Class, DataConverter> typeConverters = new HashMap<Class, DataConverter>()
     protected Map<Class, ValueConverter> conversionHelpers = new HashMap<Class, ValueConverter>()
 
-    static final INDEXED_PROPERTY_REGEX = /(.*)\[\s*([^\s]*)\s*\]/
+    static final INDEXED_PROPERTY_REGEX = /(.*)\[\s*([^\s]*)\s*\]\s*$/
 
     SimpleDataBinder() {
         conversionHelpers.put(Boolean.TYPE, new BooleanConversionHelper())
@@ -86,12 +86,6 @@ class SimpleDataBinder implements DataBinder {
         bind obj, new GPathResultMap(gpath)
     }
 
-    protected isOkToBind(String propName, String prefix, List whiteList, List blackList) {
-        def prefixedName = prefix ? prefix + '.' + propName : propName
-        
-        'metaClass' != propName && !blackList?.contains(prefixedName) && (!whiteList || whiteList.contains(prefixedName) || whiteList.find { String it -> it.startsWith(prefixedName + '.')})
-    }
-
     void bind(obj, Map<String, Object> source, String filter, List whiteList, List blackList, DataBindingListener listener) {
         bind obj, filter, '', source, whiteList, blackList, listener
     }
@@ -104,24 +98,14 @@ class SimpleDataBinder implements DataBinder {
             if(filter) {
                 propName = propName[(1+filter.size())..-1]
             }
-            def metaProperty = obj.metaClass.getMetaProperty propName
-            if(metaProperty) {
-                if(isOkToBind(metaProperty.name, prefix, whiteList, blackList)) {
-                    def propertyType = metaProperty.type
-                    if(typeConverters.containsKey(propertyType)) {
-                        def converter = typeConverters[propertyType]
-                        if(!(converter instanceof StructuredDataConverter) || 'struct' == val) {
-                            val = typeConverters[propertyType].convertValue obj, propName, source
-                        }
-                    }
-                    setPropertyValue obj, source, propName, prefix, val, listener
-                }
-            } else {
-                if(!(val instanceof Map && val.size() == 1 && val.containsKey('id'))) {
-                    processProperty obj, propName, prefix, val, source, whiteList, blackList, listener
-                }
-            }
+            processProperty obj, propName, prefix, val, source, whiteList, blackList, listener
         }
+    }
+
+    protected isOkToBind(String propName, String prefix, List whiteList, List blackList) {
+        def prefixedName = prefix ? prefix + '.' + propName : propName
+        
+        'metaClass' != propName && !blackList?.contains(prefixedName) && (!whiteList || whiteList.contains(prefixedName) || whiteList.find { String it -> it.startsWith(prefixedName + '.')})
     }
 
     protected IndexedPropertyReferenceDescriptor getIndexedPropertyReferenceDescriptor(propName) {
@@ -136,41 +120,55 @@ class SimpleDataBinder implements DataBinder {
     }
     
     protected processProperty(obj, String propName, String prefix, val, Map source, List whiteList, List blackList, DataBindingListener listener) {
-        def indexedPropertyReferenceDescriptor = getIndexedPropertyReferenceDescriptor propName
-        if(indexedPropertyReferenceDescriptor) {
-            def simplePropertyName = indexedPropertyReferenceDescriptor.propertyName
-            def metaProperty = obj.metaClass.getMetaProperty simplePropertyName
-            if(metaProperty && isOkToBind(metaProperty.name, prefix, whiteList, blackList)) {
+        def metaProperty = obj.metaClass.getMetaProperty propName
+        if(metaProperty) {
+            if(isOkToBind(metaProperty.name, prefix, whiteList, blackList)) {
                 def propertyType = metaProperty.type
-                if(Collection.isAssignableFrom(propertyType)) {
-                    def index = Integer.parseInt(indexedPropertyReferenceDescriptor.index)
-                    Collection collectionInstance = (Collection)obj[simplePropertyName]
-                    if(collectionInstance == null) {
-                        collectionInstance = initializeCollection obj, simplePropertyName, propertyType
+                if(typeConverters.containsKey(propertyType)) {
+                    def converter = typeConverters[propertyType]
+                    if(!(converter instanceof StructuredDataConverter) || 'struct' == val) {
+                        val = typeConverters[propertyType].convertValue obj, propName, source
                     }
-                    def indexedInstance = collectionInstance[index]
-                    if(indexedInstance == null) {
-                        Class genericType = getReferencedTypeForCollection(simplePropertyName, obj)
-                        if(genericType) {
-                            indexedInstance = genericType.newInstance()
-                            addElementToCollectionAt obj, simplePropertyName, collectionInstance, index, indexedInstance
-                        } else {
-                            addElementToCollectionAt obj, simplePropertyName, collectionInstance, index, val
+                }
+                setPropertyValue obj, source, propName, prefix, val, listener
+            }
+        } else {
+            def indexedPropertyReferenceDescriptor = getIndexedPropertyReferenceDescriptor propName
+            if(indexedPropertyReferenceDescriptor) {
+                def simplePropertyName = indexedPropertyReferenceDescriptor.propertyName
+                metaProperty = obj.metaClass.getMetaProperty simplePropertyName
+                if(metaProperty && isOkToBind(metaProperty.name, prefix, whiteList, blackList)) {
+                    def propertyType = metaProperty.type
+                    if(Collection.isAssignableFrom(propertyType)) {
+                        def index = Integer.parseInt(indexedPropertyReferenceDescriptor.index)
+                        Collection collectionInstance = (Collection)obj[simplePropertyName]
+                        if(collectionInstance == null) {
+                            collectionInstance = initializeCollection obj, simplePropertyName, propertyType
                         }
-                    }
-                    if(indexedInstance != null) {
-                        if(val instanceof Map) {
-                            bind indexedInstance, (Map)val, listener
-                        } else if (val == null && indexedInstance != null) {
-                            addElementToCollectionAt obj, simplePropertyName, collectionInstance, index, null
+                        def indexedInstance = collectionInstance[index]
+                        if(indexedInstance == null) {
+                            Class genericType = getReferencedTypeForCollection(simplePropertyName, obj)
+                            if(genericType) {
+                                indexedInstance = genericType.newInstance()
+                                addElementToCollectionAt obj, simplePropertyName, collectionInstance, index, indexedInstance
+                            } else {
+                                addElementToCollectionAt obj, simplePropertyName, collectionInstance, index, val
+                            }
                         }
+                        if(indexedInstance != null) {
+                            if(val instanceof Map) {
+                                bind indexedInstance, (Map)val, listener
+                            } else if (val == null && indexedInstance != null) {
+                                addElementToCollectionAt obj, simplePropertyName, collectionInstance, index, null
+                            }
+                        }
+                    } else if(Map.isAssignableFrom(propertyType)) {
+                        Map mapInstance = (Map)obj[simplePropertyName]
+                        if(mapInstance == null) {
+                            mapInstance = initializeMap obj, simplePropertyName
+                        }
+                        mapInstance[indexedPropertyReferenceDescriptor.index] = val
                     }
-                } else if(Map.isAssignableFrom(propertyType)) {
-                    Map mapInstance = (Map)obj[simplePropertyName]
-                    if(mapInstance == null) {
-                        mapInstance = initializeMap obj, simplePropertyName
-                    }
-                    mapInstance[indexedPropertyReferenceDescriptor.index] = val
                 }
             }
         }
@@ -197,6 +195,7 @@ class SimpleDataBinder implements DataBinder {
         }
     }
 
+    @CompileStatic(TypeCheckingMode.SKIP)
     protected Map initializeMap(obj, String propertyName) {
         if(obj[propertyName] == null) {
             obj[propertyName] = [:]

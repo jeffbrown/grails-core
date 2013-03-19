@@ -1248,7 +1248,7 @@ class MockUtilsTests extends GroovyTestCase {
         MockUtils.mockDomain(TestNestedParentDomain, errorsMap)
         MockUtils.mockDomain(TestNestedChildDomain, errorsMap, [new TestNestedChildDomain(id: 42L, name: 'Apple')])
 
-        def params = [name: 'Fruit basket', 'child.id': 42L]
+        def params = [name: 'Fruit basket', 'child': [id: 42L]]
         def dc = new TestNestedParentDomain()
         dc.properties = params
 

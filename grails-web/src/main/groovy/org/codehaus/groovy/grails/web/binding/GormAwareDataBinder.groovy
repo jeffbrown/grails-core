@@ -100,9 +100,12 @@ class GormAwareDataBinder extends SimpleDataBinder {
 
     @Override
     protected processProperty(obj, String propName, String prefix, val, Map source,  List whiteList, List blackList, DataBindingListener listener) {
-        if(propName.endsWith('.id')) {
-            def simplePropName = propName[0..-4]
-            def descriptor = getIndexedPropertyReferenceDescriptor simplePropName
+        if(val instanceof Map && val.containsKey('id')) {
+            def idValue = val['id']
+            if(idValue instanceof GString) {
+                idValue = idValue.toString()
+            }
+            def descriptor = getIndexedPropertyReferenceDescriptor propName
             if(descriptor) {
                 def metaProperty = obj.metaClass.getMetaProperty descriptor.propertyName
                 if(metaProperty) {
@@ -110,26 +113,26 @@ class GormAwareDataBinder extends SimpleDataBinder {
                     if(referencedType != null) {
                         if(Collection.isAssignableFrom(metaProperty.type)) {
                             def collection = initializeCollection obj, descriptor.propertyName, metaProperty.type
-                            addElementToCollectionAt obj, descriptor.propertyName, collection, Integer.parseInt(descriptor.index), 'null' == val ? null : getPersistentInstance(referencedType, val.toString())
+                            addElementToCollectionAt obj, descriptor.propertyName, collection, Integer.parseInt(descriptor.index), 'null' == idValue ? null : getPersistentInstance(referencedType, idValue)
                         } else if(Map.isAssignableFrom(metaProperty.type)) {
                             Map map = (Map)obj[descriptor.propertyName]
-                            if('null' == val) {
+                            if('null' == idValue) {
                                 if(map != null) {
                                     map.remove descriptor.index
                                 }
                             } else {
                                 map = initializeMap obj, descriptor.propertyName
-                                map[descriptor.index] = getPersistentInstance referencedType, val
+                                map[descriptor.index] = getPersistentInstance referencedType, idValue
                             }
                         }
                     }
                 }
             } else {
-                if(isOkToBind(simplePropName, prefix, whiteList, blackList)) {
-                    def metaProperty = obj.metaClass.getMetaProperty simplePropName
+                if(isOkToBind(propName, prefix, whiteList, blackList)) {
+                    def metaProperty = obj.metaClass.getMetaProperty propName
                     if(metaProperty) {
-                        def persistedInstance = 'null' == val ? null : getPersistentInstance(((MetaBeanProperty)metaProperty).field.type, val)
-                        setPropertyValue obj, source, simplePropName, prefix, persistedInstance, listener
+                        def persistedInstance = 'null' == idValue ? null : getPersistentInstance(((MetaBeanProperty)metaProperty).field.type, idValue)
+                        setPropertyValue obj, source, propName, prefix, persistedInstance, listener
                     }
                 }
             }

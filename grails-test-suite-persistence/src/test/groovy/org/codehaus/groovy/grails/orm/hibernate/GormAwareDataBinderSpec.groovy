@@ -20,28 +20,28 @@ import org.codehaus.groovy.grails.web.binding.GormAwareDataBinder
 
 class GormAwareDataBinderSpec extends GormSpec {
 
-    void 'Test dotted id binding'() {
+    void 'Test id binding'() {
         given:
         def binder = new GormAwareDataBinder(grailsApplication)
         def author = new Author(name: 'David Foster Wallace').save(flush: true)
         def publication = new Publication()
 
         when:
-        binder.bind publication, [title: 'Infinite Jest', 'author.id': author.id]
+        binder.bind publication, [title: 'Infinite Jest', author: [id: author.id]]
 
         then:
         publication.title == 'Infinite Jest'
         publication.author.name == 'David Foster Wallace'
         
         when:
-        binder.bind publication, ['author.id': 'null']
+        binder.bind publication, [author: [id: 'null']]
         
         then:
         publication.author == null
 
         when:
         publication.title = null
-        binder.bind publication, [title: 'Infinite Jest', 'author.id': author.id], [], ['author']
+        binder.bind publication, [title: 'Infinite Jest', author: [id: author.id]], [], ['author']
 
         then:
         publication.title == 'Infinite Jest'
