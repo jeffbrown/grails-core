@@ -188,18 +188,18 @@ public class DataBindingUtils {
             Object source, List include, List exclude, String filter) {
         BindingResult bindingResult = null;
         // setting this inline temporarily here for now...
-        boolean useNewBinder = false;
+        boolean useLegacyBinder = false;
         final GrailsApplication grailsApplication = GrailsWebRequest.lookupApplication();
         if(grailsApplication != null) {
-            if(Boolean.TRUE.equals(grailsApplication.getFlatConfig().get("grails.databinding.useNewBinder"))) {
-                useNewBinder = true;
+            if(Boolean.TRUE.equals(grailsApplication.getFlatConfig().get("grails.databinding.useLegacyBinder"))) {
+                useLegacyBinder = true;
             }
         }
-        if (useNewBinder && source instanceof Map) {
-            Map propertyMap = convertPotentialGStrings((Map) source);
+        if (!useLegacyBinder && source instanceof Map) {
+            final Map propertyMap = convertPotentialGStrings((Map) source);
             final DataBinder gormAwareDataBinder = new GormAwareDataBinder(grailsApplication);
             final BindingResult tmpBindingResult = new BeanPropertyBindingResult(object, object.getClass().getName());
-            DataBindingListener listener = new GormAwareDataBindindingListener(tmpBindingResult, object);
+            final DataBindingListener listener = new GormAwareDataBindindingListener(tmpBindingResult, object);
             gormAwareDataBinder.bind(object, propertyMap, filter, include, exclude, listener);
             bindingResult = tmpBindingResult;
         } else {
