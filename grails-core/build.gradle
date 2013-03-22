@@ -1,7 +1,9 @@
 configurations {
+    preCachePlugins
     optional
 }
 dependencies {
+    preCachePlugins 'org.grails.plugins:hibernate:3.6.10.BUILD-SNAPSHOT'
 
     compile 'javax.servlet:javax.servlet-api:3.0.1', provided
     compile 'org.hibernate.javax.persistence:hibernate-jpa-2.0-api:1.0.1.Final'
