@@ -19,6 +19,7 @@ import grails.util.GrailsNameUtils
 import grails.util.Metadata
 import groovy.transform.CompileStatic
 import groovy.util.slurpersupport.GPathResult
+import org.codehaus.groovy.grails.resolve.ivy.IvyExcludeResolver
 
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -433,9 +434,11 @@ class IvyDependencyManager extends AbstractIvyDependencyManager implements Depen
     Set<Dependency> convertToGrailsDependencies(Set<DependencyDescriptor> descriptors) {
         Set<Dependency> dependencies = []
         for (DependencyDescriptor dd in descriptors) {
+            EnhancedDefaultDependencyDescriptor edd = (EnhancedDefaultDependencyDescriptor)dd
             final drid = dd.dependencyRevisionId
             def d = new Dependency(drid.organisation, drid.name, drid.revision)
             d.transitive = dd.transitive
+            d.exported = edd.exported
 
             dependencies << d
         }
@@ -459,6 +462,11 @@ class IvyDependencyManager extends AbstractIvyDependencyManager implements Depen
     @Override
     Collection<Dependency> getAllDependencies(String scope) {
         convertToGrailsDependencies(dependencyDescriptors.findAll { it.scope == scope })
+    }
+
+    @Override
+    ExcludeResolver getExcludeResolver() {
+        return new IvyExcludeResolver(this)
     }
 
     void produceReport(String scope) {

@@ -16,6 +16,32 @@ dependencies {
                 project(':grails-plugin-log4j'),
                 project(':grails-plugin-url-mappings'),
                 project(':grails-plugin-services')
+
+    
+    testCompile "org.grails:grails-datastore-gorm-hibernate:$datastoreVersion", {
+        exclude group: 'org.grails', module:'grails-datastore-gorm'
+        exclude group: 'org.grails', module:'grails-datastore-core'
+        exclude group: 'org.springframework', module:'spring-core'
+        exclude group: 'org.springframework', module:'spring-context'
+        exclude group: 'org.springframework', module:'spring-web'
+        exclude group: 'org.springframework', module:'spring-beans'
+        exclude group: 'org.springframework', module:'spring-tx'
+        exclude group: 'org.slf4j', module:'jcl-over-slf4j'
+        exclude group: 'org.slf4j', module:'jul-to-slf4j'
+        exclude group: 'org.slf4j', module:'slf4j-api'
+        exclude group: 'org.slf4j', module:'slf4j-simple'
+        exclude group: 'org.grails', module:'grails-bootstrap'
+        exclude group: 'org.grails', module:'grails-plugin-domain-class'
+        exclude group: 'org.grails', module:'grails-core'
+        exclude group: 'org.grails', module:'grails-web'
+        exclude group: 'org.grails', module:'grails-test'
+        exclude group: 'org.grails', module:'grails-async'
+        exclude group: 'commons-collections', module:'commons-collections'
+        exclude group: 'commons-lang', module:'commons-lang'
+        exclude group: 'javassit', module:'javassist'
+        exclude group: 'java-persistence', module:'persistence-api'
+        exclude group: 'javassist', module: 'javassist'        
+    }
 }
 test {
     maxParallelForks = 4
@@ -54,3 +80,11 @@ task isolatedTestsSix(type:Test) {
     includes = ["**/NestedXmlBindingTests.class"]
 }
 test.dependsOn isolatedTestsOne, isolatedTestsTwo, isolatedTestsThree, isolatedTestsFour, isolatedTestsFive, isolatedTestsSix
+
+
+/*
+test {
+	jvmArgs '-Xmx1024m', '-Xdebug', '-Xnoagent', '-Dgrails.full.stacktrace=true', '-Djava.compiler=NONE',
+	        '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
+}
+*/

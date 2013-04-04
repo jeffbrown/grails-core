@@ -31,7 +31,9 @@ import org.apache.maven.settings.building.SettingsBuildingResult
 import org.codehaus.groovy.grails.resolve.DependencyManager
 import org.codehaus.groovy.grails.resolve.DependencyManagerUtils
 import org.codehaus.groovy.grails.resolve.DependencyReport
+import org.codehaus.groovy.grails.resolve.ExcludeResolver
 import org.codehaus.groovy.grails.resolve.maven.aether.config.AetherDsl
+import org.codehaus.groovy.grails.resolve.maven.aether.config.DependencyConfiguration
 import org.codehaus.groovy.grails.resolve.maven.aether.support.GrailsConsoleLoggerManager
 import org.codehaus.groovy.grails.resolve.reporting.SimpleGraphRenderer
 import org.codehaus.plexus.DefaultPlexusContainer
@@ -169,8 +171,23 @@ class AetherDependencyManager implements DependencyManager {
         reportOnScope(BuildSettings.TEST_SCOPE, BuildSettings.TEST_SCOPE_DESC)
     }
 
-    private void reportOnScope(String scope, String desc) {
+    protected void reportOnScope(String scope, String desc) {
         DependencyNode root = collectDependencies(scope)
+        AetherGraphNode node = resolveToGraphNode(root, scope)
+
+        def nlg = new PreorderNodeListGenerator()
+        root.accept nlg
+
+        def renderer = new SimpleGraphRenderer(scope, "$desc (total: ${nlg.files.size()})")
+        renderer.render(node)
+    }
+
+    AetherGraphNode resolveToGraphNode(String scope) {
+        DependencyNode root = collectDependencies(scope)
+        return resolveToGraphNode(root, scope)
+    }
+
+    protected AetherGraphNode resolveToGraphNode(DependencyNode root, String scope) {
         DependencyResult result
 
         List<Artifact> unresolved = []
@@ -181,12 +198,11 @@ class AetherDependencyManager implements DependencyManager {
             final cause = e.cause
             if (cause instanceof ArtifactResolutionException) {
                 List<ArtifactResult> results = cause.getResults()
-                for(ArtifactResult r in results) {
+                for (ArtifactResult r in results) {
                     if (!r.isResolved()) {
                         if (r.artifact) {
                             unresolved << r.artifact
-                        }
-                        else {
+                        } else {
                             if (r.exceptions) {
                                 def ex = r.exceptions[0]
                                 if (ex instanceof ArtifactTransferException) {
@@ -201,13 +217,8 @@ class AetherDependencyManager implements DependencyManager {
             }
             GrailsConsole.instance.error("${e.message} (scope: $scope)", e)
         }
-
-        def nlg = new PreorderNodeListGenerator()
-        root.accept nlg
         AetherGraphNode node = new AetherGraphNode(result, unresolved)
-
-        def renderer = new SimpleGraphRenderer(scope, "$desc (total: ${nlg.files.size()})")
-        renderer.render(node)
+        node
     }
 
     @Override
@@ -314,7 +325,7 @@ class AetherDependencyManager implements DependencyManager {
         }
     }
 
-    private DependencyResult resolveToResult(DependencyNode node, String scope) {
+    protected DependencyResult resolveToResult(DependencyNode node, String scope) {
         def dependencyRequest = new DependencyRequest(node, null)
 
         if (scope && scope != 'build') {
@@ -328,7 +339,7 @@ class AetherDependencyManager implements DependencyManager {
         resolveResult
     }
 
-    private DependencyNode collectDependencies(String scope) {
+    protected DependencyNode collectDependencies(String scope) {
         SettingsBuildingResult result = settingsBuilder.build(new DefaultSettingsBuildingRequest())
         settings = result.getEffectiveSettings()
         final proxyHost = System.getProperty("http.proxyHost")
@@ -397,9 +408,8 @@ class AetherDependencyManager implements DependencyManager {
         return proxy
     }
 
-    void addDependency(Dependency dependency) {
-        Artifact artifact = dependency.artifact
-        final grailsDependency = new org.codehaus.groovy.grails.resolve.Dependency(artifact.groupId, artifact.artifactId, artifact.version)
+    void addDependency(Dependency dependency, DependencyConfiguration configuration = null) {
+        org.codehaus.groovy.grails.resolve.Dependency grailsDependency = createGrailsDependency(dependency, configuration)
         grailsDependencies << grailsDependency
         grailsDependenciesByScope[dependency.scope] << grailsDependency
         final aetherDependencies = dependencies
@@ -408,6 +418,19 @@ class AetherDependencyManager implements DependencyManager {
             grailsPluginDependencies << grailsDependency
             grailsPluginDependenciesByScope[dependency.scope] << grailsDependency
         }
+    }
+
+    protected org.codehaus.groovy.grails.resolve.Dependency createGrailsDependency(Dependency dependency, DependencyConfiguration configuration = null) {
+        Artifact artifact = dependency.artifact
+        final grailsDependency = new org.codehaus.groovy.grails.resolve.Dependency(artifact.groupId, artifact.artifactId, artifact.version)
+        if (configuration) {
+            grailsDependency.transitive = configuration.transitive
+            grailsDependency.exported = configuration.exported
+        }
+        for(Exclusion e in dependency.exclusions) {
+            grailsDependency.exclude(e.groupId, e.artifactId)
+        }
+        return grailsDependency
     }
 
     protected void includeJavadocAndSourceIfNecessary(List<Dependency> aetherDependencies, Dependency dependency) {
@@ -437,9 +460,9 @@ class AetherDependencyManager implements DependencyManager {
         }
     }
 
-    void addBuildDependency(Dependency dependency) {
-        Artifact artifact = dependency.artifact
-        final grailsDependency = new org.codehaus.groovy.grails.resolve.Dependency(artifact.groupId, artifact.artifactId, artifact.version)
+    void addBuildDependency(Dependency dependency, DependencyConfiguration configuration = null) {
+        final grailsDependency = createGrailsDependency(dependency,configuration
+        )
         grailsDependencies << grailsDependency
         grailsDependenciesByScope["build"] << grailsDependency
         buildDependencies << dependency
@@ -472,7 +495,7 @@ class AetherDependencyManager implements DependencyManager {
     }
 
     @Override
-    DependencyManager createCopy(BuildSettings buildSettings) {
+    DependencyManager createCopy(BuildSettings buildSettings = null) {
         AetherDependencyManager dependencyManager = new AetherDependencyManager()
         dependencyManager.repositories = this.repositories
         dependencyManager.settings = this.settings
@@ -503,5 +526,10 @@ class AetherDependencyManager implements DependencyManager {
     @Override
     Collection<org.codehaus.groovy.grails.resolve.Dependency> getAllDependencies(String scope) {
         return grailsDependencies[scope].asImmutable()
+    }
+
+    @Override
+    ExcludeResolver getExcludeResolver() {
+        return new AetherExcludeResolver(this)
     }
 }

@@ -20,6 +20,7 @@ class Dependency {
     String classifier
     boolean transitive = true
     boolean inherited = false
+    boolean exported = true
 
     Dependency(String group, String name, String version, String...exc) {
         this.group = group
@@ -46,7 +47,7 @@ class Dependency {
      * Array of tokens for the group, name and version
      */
     String[] getTokens() {
-        [group, name, version]
+        [group, name, version] as String[]
     }
 
     String[] getExcludeArray() {

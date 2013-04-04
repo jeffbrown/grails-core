@@ -10,7 +10,6 @@ grails.project.dependency.resolution = {
         // excludes 'ehcache'
     }
     log "warn" // log level of Ivy resolver, either 'error', 'warn', 'info', 'debug' or 'verbose'
-    legacyResolve false // whether to do a secondary resolve on plugin installation, not advised and here for backwards compatibility
     repositories {
         grailsCentral()
         // uncomment the below to enable remote dependency resolution
@@ -29,7 +28,7 @@ grails.project.dependency.resolution = {
     }
 
     plugins {
-        build(":release:2.2.0",
+        build(":release:3.0.0.BUILD-SNAPSHOT",
               ":rest-client-builder:1.0.3") {
             export = false
         }

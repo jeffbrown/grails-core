@@ -34,14 +34,14 @@ public interface DependencyManager {
      */
     String GRAILS_CENTRAL_PLUGIN_LIST = "http://grails.org/plugins/.plugin-meta/plugins-list.xml";
 
-
     /**
      * Downloads the Grails central plugin list and saves it to the given file. The file is then parsed and the resulting XML returned
      *
      * @param localFile The local file
      * @return The parsed XML
      */
-    public GPathResult downloadPluginList(File localFile);
+    GPathResult downloadPluginList(File localFile);
+
     /**
      * Outputs the dependency graph to System.out
      */
@@ -118,4 +118,9 @@ public interface DependencyManager {
      * @return All application dependencies
      */
     Collection<Dependency> getAllDependencies(String scope);
+
+    /**
+     * @return Returns the exclude resolver for this dependency manager
+     */
+    ExcludeResolver getExcludeResolver();
 }

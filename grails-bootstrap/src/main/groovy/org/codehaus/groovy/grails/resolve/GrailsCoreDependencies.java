@@ -31,9 +31,8 @@ public class GrailsCoreDependencies {
     public final String grailsVersion;
     public final String servletVersion;
     protected final String groovyVersion = "2.1.1";
-    protected final String log4jVersion = "1.2.16";
-    protected final String h2Version = "1.3.164";
-    protected final String ehcacheVersion = "2.4.6";
+    protected final String log4jVersion = "1.2.17";
+    protected final String h2Version = "1.3.170";
     protected final String jaxbVersion = "2.0";
     private String servletApiVersion = "3.0.1";
 
@@ -85,7 +84,6 @@ public class GrailsCoreDependencies {
             new Dependency("org.grails", "grails-plugin-gsp", grailsVersion, true),
             new Dependency("org.grails", "grails-plugin-i18n", grailsVersion, true),
             new Dependency("org.grails", "grails-plugin-log4j", grailsVersion, true),
-            new Dependency("org.grails", "grails-plugin-scaffolding", grailsVersion, true),
             new Dependency("org.grails", "grails-plugin-services", grailsVersion, true),
             new Dependency("org.grails", "grails-plugin-servlets", grailsVersion, true),
             new Dependency("org.grails", "grails-plugin-mimetypes", grailsVersion, true),
@@ -101,15 +99,13 @@ public class GrailsCoreDependencies {
         testDependencies = Arrays.asList(
             new Dependency("org.grails", "grails-plugin-testing", grailsVersion, true),
             new Dependency("org.grails", "grails-test", grailsVersion, true)
-
         );
 
         String[] loggingExcludes = {"javax.mail:mail", "javax.jms:jms", "com.sun.jdmk:jmxtools", "com.sun.jmx:jmxri"};
         runtimeDependencies = Arrays.asList(
             new Dependency("com.h2database", "h2", h2Version, true),
-            new Dependency("net.sf.ehcache", "ehcache-core", ehcacheVersion, true, "javax.jms:jms", "commons-logging", "javax.servlet:servlet-api", "org.slf4j:slf4j-api"),
-            new Dependency("log4j", "log4j", log4jVersion, true, loggingExcludes)
-
+            new Dependency("log4j", "log4j", log4jVersion, true, loggingExcludes),
+            new Dependency("org.grails", "grails-resources", grailsVersion, true)
         );
 
         if (java5compatible) {
