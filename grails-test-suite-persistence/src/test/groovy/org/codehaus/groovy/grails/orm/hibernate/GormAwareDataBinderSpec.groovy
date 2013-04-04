@@ -18,8 +18,7 @@ import grails.persistence.Entity
 
 import org.codehaus.groovy.grails.web.binding.GormAwareDataBinder
 
-@spock.lang.Ignore
-class GormAwareDataBinderSpec extends spock.lang.Specification /*GormSpec*/ {
+class GormAwareDataBinderSpec extends GormSpec {
 
     void 'Test id binding'() {
         given:
