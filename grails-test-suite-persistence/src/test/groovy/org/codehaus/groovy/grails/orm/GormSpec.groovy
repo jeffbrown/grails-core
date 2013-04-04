@@ -2,6 +2,7 @@ package org.codehaus.groovy.grails.orm
 
 import grails.util.Metadata
 
+import org.codehaus.groovy.grails.plugins.MockHibernateGrailsPlugin
 import org.codehaus.groovy.grails.commons.DefaultGrailsApplication
 import org.codehaus.groovy.grails.commons.GrailsApplication
 import org.codehaus.groovy.grails.commons.cfg.ConfigurationHelper
