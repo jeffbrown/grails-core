@@ -31,7 +31,7 @@ class JSONBindingToNullTests {
                     ]
 
     }
-
+/*
     @Test
     void testJsonBindingToNull() {
 
@@ -62,6 +62,7 @@ class JSONBindingToNullTests {
         // if any binding errors occurred this will break
         assert response.xml.@id == pebbles.id
     }
+    */
 }
 
 class UserController {
