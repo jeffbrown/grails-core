@@ -45,7 +45,6 @@ import grails.persistence.*
     }
 
     void testXmlMarshallingIntoParamsObject() {
-        /*
         def controller = ga.getControllerClass(TestConverterController.name).newInstance()
 
         controller.request.contentType = "text/xml"
@@ -70,10 +69,8 @@ import grails.persistence.*
 
         // "id" should not bind because we are binding to a domain class.
         assertNull model.book.id
-        */
     }
     void testXmlMarshallingIntoParamsObjectWithBindableId() {
-        /*
         def controller = ga.getControllerClass(TestConverterController.name).newInstance()
 
         controller.request.contentType = "text/xml"
@@ -96,7 +93,6 @@ import grails.persistence.*
         assertEquals 1, model.book.author.id
         assertEquals 'Stephen King', model.book.author.name
         assertEquals 1, model.book.id
-        */
     }
 }
 
@@ -131,6 +127,10 @@ class AutoParamsXmlMarshallingBookWithBindableId {
 @Entity
 class AutoParamsXmlMarshallingAuthor {
     String name
+    
+    static constraints = {
+        id bindable: true
+    }
 
     // mocked get method
     static get(Serializable id) {

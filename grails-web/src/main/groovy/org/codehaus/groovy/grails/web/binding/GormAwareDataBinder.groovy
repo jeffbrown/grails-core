@@ -133,10 +133,12 @@ class GormAwareDataBinder extends SimpleDataBinder {
                     if(metaProperty) {
                         def persistedInstance = 'null' == idValue ? null : getPersistentInstance(((MetaBeanProperty)metaProperty).field.type, idValue)
                         setPropertyValue obj, source, propName, prefix, persistedInstance, listener
+                        bind persistedInstance, val, listener
                     }
                 }
             }
         } else {
+        /*
             if(grailsApplication != null) {
                 def domainClass = (GrailsDomainClass)grailsApplication.getArtefact(DomainClassArtefactHandler.TYPE, obj.getClass().name)
                 if(domainClass != null) {
@@ -146,6 +148,7 @@ class GormAwareDataBinder extends SimpleDataBinder {
                     }
                 }
             }
+            */
             super.processProperty obj, propName, prefix, val, source, whiteList, blackList, listener
         }
     }
