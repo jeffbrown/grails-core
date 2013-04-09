@@ -17,6 +17,41 @@ package org.grails.databinding.xml
 import spock.lang.Specification
 
 class GPathResultMapSpec extends Specification {
+    
+    void 'Test nested elements'() {
+        given:
+        def xml = new XmlSlurper().parseText('''
+<person>
+   <name>John Doe</name>
+   <locations>
+      <location>
+         <shippingAddress>foo</shippingAddress>
+         <billingAddress>bar</billingAddress>
+      </location>
+      <location>
+         <shippingAddress>foo2</shippingAddress>
+         <billingAddress>bar2</billingAddress>
+      </location>
+   </locations>
+</person>
+''')
+        when:
+        def person = new GPathResultMap(xml)
+        
+        then:
+        person.size() == 2
+        person.name == 'John Doe'
+        person.locations instanceof Map
+        person.locations.size() == 1
+        person.locations.location instanceof List
+        person.locations.location.size() == 2
+        person.locations.location[0] instanceof Map
+        person.locations.location[0].shippingAddress == 'foo'
+        person.locations.location[0].billingAddress == 'bar'
+        person.locations.location[1] instanceof Map
+        person.locations.location[1].shippingAddress == 'foo2'
+        person.locations.location[1].billingAddress == 'bar2'
+    }
 
     void 'Test basic Map operations'() {
         given:
