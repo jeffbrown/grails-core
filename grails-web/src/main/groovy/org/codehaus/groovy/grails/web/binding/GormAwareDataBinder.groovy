@@ -131,9 +131,18 @@ class GormAwareDataBinder extends SimpleDataBinder {
                 if(isOkToBind(propName, prefix, whiteList, blackList)) {
                     def metaProperty = obj.metaClass.getMetaProperty propName
                     if(metaProperty) {
-                        def persistedInstance = 'null' == idValue ? null : getPersistentInstance(((MetaBeanProperty)metaProperty).field.type, idValue)
+                        def persistedInstance = null
+                        if(idValue != 'null') {
+                            persistedInstance = getPersistentInstance(((MetaBeanProperty)metaProperty).field.type, idValue)
+                            if(persistedInstance == null) {
+                                persistedInstance = ((MetaBeanProperty)metaProperty).field.type.newInstance()
+                            }
+                        }
+                        
                         setPropertyValue obj, source, propName, prefix, persistedInstance, listener
-                        bind persistedInstance, val, listener
+                        if(persistedInstance != null) {
+                            bind persistedInstance, val, listener
+                        }
                     }
                 }
             }
