@@ -44,10 +44,9 @@ class GormAwareDataBindindingListener extends
             // This is obviously a temporary placeholder...
             
             Object[] o = getArgumentsForBindError(object.getClass().getName(), error.getPropertyName());
-            List<String> codes = new ArrayList<String>();
+            def codes = ['typeMismatch']
             String defaultMessage = "Some Default Message";
             if(error.getCause() instanceof MalformedURLException) {
-                codes.add("typeMismatch");
                 defaultMessage = "Failed to convert property value of type '" + 
                 error.getRejectedValue().getClass().getName() + 
                 "' to required type 'java.net.URL' for property '" + 
@@ -57,8 +56,6 @@ class GormAwareDataBindindingListener extends
                 "]: class path resource [" +
                 error.getRejectedValue() +
                 "] cannot be resolved to URL because it does not exist";
-            } else if(error.getCause() instanceof NumberFormatException || error.getCause() instanceof IllegalArgumentException) {
-                codes.add('typeMismatch')
             }
             ObjectError fieldError = new FieldError("", error.getPropertyName(), error.getRejectedValue(), true, codes.toArray(new String[0]), o, defaultMessage);
             tmpBindingResult.addError(fieldError);
