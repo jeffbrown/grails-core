@@ -55,7 +55,6 @@ class NestedXmlBindingTests {
         assert p.location.billingAddress == 'bar'
     }
     
-    /*
     void testBindToArrayOfDomains() {
         request.xml = '''
 <person>
@@ -87,7 +86,7 @@ class NestedXmlBindingTests {
         assert p.locations[1].billingAddress == 'bar2'
 
     }
-    */
+
     void testBindToOne() {
         request.xml = '''<?xml version="1.0" encoding="UTF-8"?>
 <foo>

@@ -262,6 +262,33 @@ class SimpleDataBindingSpec extends Specification {
         then:
         user.role == Role.USER
     }
+    
+    void 'Test binding to a List with a combination of Map values and instances of the actual type contained in the List '() {
+        given:
+        def binder = new SimpleDataBinder()
+        def bindingSource = [:]
+        bindingSource.name = 'My Factory'
+        
+        // this list contains Maps and a Widget instance.  The Maps should be transformed into Widget instances
+        bindingSource.widgets = [widget:[[alpha: 'alpha 1', beta: 'beta 1'], new Widget(alpha: 'alpha 2', beta: 'beta 2'), [alpha: 'alpha 3', beta: 'beta 3']]]
+        def factory = new Factory()
+        
+        when:
+        binder.bind factory, bindingSource
+        
+        then:
+        factory.name == 'My Factory'
+        factory.widgets.size() == 3
+        factory.widgets[0] instanceof Widget
+        factory.widgets[1] instanceof Widget
+        factory.widgets[2] instanceof Widget
+        factory.widgets[0].alpha == 'alpha 1'
+        factory.widgets[0].beta == 'beta 1'
+        factory.widgets[1].alpha == 'alpha 2'
+        factory.widgets[1].beta == 'beta 2'
+        factory.widgets[2].alpha == 'alpha 3'
+        factory.widgets[2].beta == 'beta 3'
+    }
 }
 
 class StringToGadgetBindingHelper implements BindingHelper {
@@ -272,6 +299,11 @@ class StringToGadgetBindingHelper implements BindingHelper {
         
         new Gadget(gamma: gammaValue?.toUpperCase())
     }
+}
+
+class Factory {
+    def name
+    List<Widget> widgets
 }
 
 class Widget {

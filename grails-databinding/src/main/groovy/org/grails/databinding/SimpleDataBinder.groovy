@@ -301,8 +301,16 @@ class SimpleDataBinder implements DataBinder {
             } else {
                 try {
                     if(propertyValue instanceof Map) {
-                        initializeProperty(obj, propName, propertyType, source)
-                        bind obj[propName], propertyValue
+                        if(Collection.isAssignableFrom(propertyType) && 
+                            propertyValue.size() == 1 &&
+                            ((Map)propertyValue)[propertyValue.keySet()[0]] instanceof List) {
+                            def key = propertyValue.keySet()[0]
+                            List list = (List)((Map)propertyValue)[key]
+                            addElementsToCollection(obj, propName, list)
+                        } else {
+                            initializeProperty(obj, propName, propertyType, source)
+                            bind obj[propName], propertyValue
+                        }
                     } else {
                         obj[propName] = convert(propertyType, propertyValue)
                     }
@@ -317,6 +325,19 @@ class SimpleDataBinder implements DataBinder {
             bind obj[propName], propName + (prefix ? '.' + prefix : ''), propertyValue
         }
         listener?.afterBinding obj, propName
+    }
+
+    protected addElementsToCollection(obj, String collectionPropertyName, List listOfValuesToAdd) {
+        Class propertyType = obj.metaClass.getMetaProperty(collectionPropertyName).type
+        def referencedType = getReferencedTypeForCollection(collectionPropertyName, obj)
+        def coll = initializeCollection(obj, collectionPropertyName, propertyType)
+        listOfValuesToAdd.each { elementInList ->
+            if(elementInList instanceof Map) {
+                coll << referencedType.newInstance(elementInList)
+            } else if(referencedType.isAssignableFrom(elementInList.getClass())) {
+                coll << elementInList
+            }
+        }
     }
 
     protected initializeProperty(obj, String propName, Class propertyType, Map<String, Object> source) {
