@@ -17,7 +17,7 @@ package org.grails.databinding
 import spock.lang.Ignore
 import spock.lang.Specification
 
-class SimpleDataBindingSpec extends Specification {
+class SimpleDataBinderSpec extends Specification {
 
     void 'Test binding to dynamically typed properties'() {
         given:
