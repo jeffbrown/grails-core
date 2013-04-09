@@ -43,6 +43,7 @@ class GPathResultMapSpec extends Specification {
         person.name == 'John Doe'
         person.locations instanceof Map
         person.locations.size() == 1
+        person.locations.entrySet().size() == 1
         person.locations.location instanceof List
         person.locations.location.size() == 2
         person.locations.location[0] instanceof Map

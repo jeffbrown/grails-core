@@ -46,8 +46,11 @@ class GPathResultMap implements Map {
     @Override
     public Set entrySet() {
         def entries = [] as Set
+        def uniqueChildNames = [] as Set
         gpath.childNodes().each { childNode ->
-            def name = childNode.name()
+            uniqueChildNames << childNode.name()
+        }
+        uniqueChildNames.each { name ->
             def value = get name
             entries << new AbstractMap.SimpleImmutableEntry(name, value)
         }
