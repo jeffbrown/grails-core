@@ -54,7 +54,7 @@ grails.mime.types = [ html: ['text/html','application/xhtml+xml'],
         assertEquals "baz", controller.params.foo.bar
         assertEquals "baz", controller.params['foo.bar']
     }
-/*
+
     void testJSONBindingWithAssociation() {
         def controller = new SiteController()
 
@@ -78,7 +78,6 @@ grails.mime.types = [ html: ['text/html','application/xhtml+xml'],
         assertEquals "blah", site.mode.code
         assertEquals "blah2", site.unwanted1
     }
-    */
 }
 
 @Entity

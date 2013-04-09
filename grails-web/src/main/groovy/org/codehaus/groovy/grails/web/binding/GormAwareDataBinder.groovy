@@ -260,4 +260,11 @@ class GormAwareDataBinder extends SimpleDataBinder {
         }
         isSet
     }
+    
+     protected convert(Class typeToConvertTo, value) {
+         if(value instanceof org.codehaus.groovy.grails.web.json.JSONObject.Null) {
+             return null
+         }
+         super.convert typeToConvertTo, value
+     }
 }

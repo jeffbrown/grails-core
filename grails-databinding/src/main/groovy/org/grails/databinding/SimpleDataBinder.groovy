@@ -24,12 +24,13 @@ import org.apache.commons.collections.set.ListOrderedSet
 import org.grails.databinding.converters.BooleanConversionHelper
 import org.grails.databinding.converters.ByteConversionHelper
 import org.grails.databinding.converters.CharConversionHelper
-import org.grails.databinding.converters.StructuredDateBindingHelper
+import org.grails.databinding.converters.DateConversionHelper
 import org.grails.databinding.converters.DoubleConversionHelper
 import org.grails.databinding.converters.FloatConversionHelper
 import org.grails.databinding.converters.IntegerConversionHelper
 import org.grails.databinding.converters.LongConversionHelper
 import org.grails.databinding.converters.ShortConversionHelper
+import org.grails.databinding.converters.StructuredDateBindingHelper
 import org.grails.databinding.converters.ValueConverter
 import org.grails.databinding.errors.SimpleBindingError
 import org.grails.databinding.events.DataBindingListener
@@ -52,6 +53,7 @@ class SimpleDataBinder implements DataBinder {
         conversionHelpers.put(Long.TYPE, new LongConversionHelper())
         conversionHelpers.put(Float.TYPE, new FloatConversionHelper())
         conversionHelpers.put(Double.TYPE, new DoubleConversionHelper())
+        conversionHelpers.put(Date, new DateConversionHelper())
 
         registerTypeConverter(java.util.Date.class, new StructuredDateBindingHelper(java.util.Date))
         registerTypeConverter(java.sql.Date.class, new StructuredDateBindingHelper(java.sql.Date))
