@@ -248,7 +248,7 @@ class Pet {
         assertEquals "Wrong 'title' property", "The Stand", b.title
         assertNull "Expected null for property 'author'", b.author
     }
-/*
+
     void testAssociationsBinding() {
         def c = ga.getControllerClass("databindingtests.TestController").newInstance()
 
@@ -256,7 +256,7 @@ class Pet {
 
         authorClass.metaClass.static.get = { Serializable id ->
             def result = authorClass.newInstance()
-            result.id = id
+            result.id = id as long
             result.name = "Mocked ${id}"
             result
         }
@@ -275,7 +275,7 @@ class Pet {
         assertEquals 5, b.author.id
         assertEquals "Mocked 5", b.author.name
     }
-*/
+
     void testMultiDBinding() {
         def c = ga.getControllerClass("databindingtests.TestController").newInstance()
 
