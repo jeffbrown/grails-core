@@ -23,7 +23,6 @@ import java.lang.reflect.Array
 import java.lang.reflect.Field
 import java.lang.reflect.ParameterizedType
 
-import org.apache.commons.collections.set.ListOrderedSet
 import org.grails.databinding.converters.ConversionService
 import org.grails.databinding.converters.DateConversionHelper
 import org.grails.databinding.converters.FormattedDateValueConverter
@@ -297,8 +296,8 @@ class SimpleDataBinder implements DataBinder {
         if(index >= autoGrowCollectionLimit && index > collection.size()) {
             return
         }
-        if(collection instanceof ListOrderedSet) {
-            collection.add Math.min(index, collection.size()), val
+        if(collection instanceof Set) {
+            collection.add val
         } else {
             collection[index] = val
         }
@@ -323,12 +322,7 @@ class SimpleDataBinder implements DataBinder {
             if(List.isAssignableFrom(type)) {
                 obj[propertyName] = new ArrayList()
             } else if (Set.isAssignableFrom(type)) {
-                obj[propertyName] = ListOrderedSet.decorate([] as Set)
-            }
-        } else if(obj[propertyName] instanceof Set) {
-            Set set = (Set)obj[propertyName]
-            if(!(set instanceof ListOrderedSet)) {
-                obj[propertyName] = ListOrderedSet.decorate(set)
+                obj[propertyName] = new HashSet()
             }
         }
         obj[propertyName]
