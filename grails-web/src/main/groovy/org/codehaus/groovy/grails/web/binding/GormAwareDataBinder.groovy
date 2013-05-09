@@ -125,17 +125,40 @@ class GormAwareDataBinder extends SimpleDataBinder {
 
     @Override
     protected processProperty(obj, String propName, val, Map source,  List whiteList, List blackList, DataBindingListener listener) {
-        if(val instanceof Map && val.containsKey('id')) {
-            def idValue = val['id']
+        boolean needsBinding = true
+        
+        if((val instanceof Map && val.containsKey('id')) || (val instanceof CharSequence)) {
+            def idValue = val instanceof Map ? val['id'] : val
             if(idValue instanceof GString) {
                 idValue = idValue.toString()
             }
             def descriptor = getIndexedPropertyReferenceDescriptor propName
+            def metaProperty
             if(descriptor) {
-                def metaProperty = obj.metaClass.getMetaProperty descriptor.propertyName
-                if(metaProperty) {
+                metaProperty = obj.metaClass.getMetaProperty descriptor.propertyName
+            } else {
+                metaProperty = obj.metaClass.getMetaProperty propName
+            }
+            if(metaProperty) {
+                def propertyType = metaProperty.type
+                if(isDomainClass(propertyType)) {
+                    needsBinding = false
+                    if(isOkToBind(propName, whiteList, blackList)) {
+                        def persistedInstance = null
+                        if(idValue != 'null' && idValue != null && idValue != '') {
+                            persistedInstance = getPersistentInstance(((MetaBeanProperty)metaProperty).field.type, idValue)
+                            bindProperty obj, source, propName, persistedInstance, listener
+                            if(persistedInstance != null && val instanceof Map) {
+                                bind persistedInstance, val, listener
+                            }
+                        } else {
+                            bindProperty obj, source, propName, null, listener
+                        }
+                    }
+                } else if(descriptor) {
                     def referencedType = getReferencedTypeForCollection descriptor.propertyName, obj
-                    if(referencedType != null) {
+                    if(referencedType != null && isDomainClass(referencedType)) {
+                        needsBinding = false
                         if(Set.isAssignableFrom(metaProperty.type)) {
                             def collection = initializeCollection obj, descriptor.propertyName, metaProperty.type
                             def instance
@@ -154,14 +177,14 @@ class GormAwareDataBinder extends SimpleDataBinder {
                                     addElementToCollectionAt obj, descriptor.propertyName, collection, Integer.parseInt(descriptor.index), instance
                                 }
                             }
-                            if(instance != null) {
+                            if(instance != null && val instanceof Map) {
                                 bind instance, val, listener
                             } 
                         } else if(Collection.isAssignableFrom(metaProperty.type)) {
                             def instance = 'null' == idValue ? null : getPersistentInstance(referencedType, idValue)
                             def collection = initializeCollection obj, descriptor.propertyName, metaProperty.type
                             addElementToCollectionAt obj, descriptor.propertyName, collection, Integer.parseInt(descriptor.index), instance
-                            if(instance != null) {
+                            if(instance != null && val instanceof Map) {
                                 bind instance, val, listener
                             } 
                         } else if(Map.isAssignableFrom(metaProperty.type)) {
@@ -176,7 +199,9 @@ class GormAwareDataBinder extends SimpleDataBinder {
                                 if(persistedInstance != null) {
                                     if(map.size() < autoGrowCollectionLimit || map.containsKey(descriptor.index)) {
                                         map[descriptor.index] = persistedInstance
-                                        bind persistedInstance, val, listener
+                                        if(val instanceof Map) {
+                                            bind persistedInstance, val, listener
+                                        }
                                     }
                                 } else {
                                     map.remove descriptor.index
@@ -185,37 +210,9 @@ class GormAwareDataBinder extends SimpleDataBinder {
                         }
                     }
                 }
-            } else {
-                if(isOkToBind(propName, whiteList, blackList)) {
-                    def metaProperty = obj.metaClass.getMetaProperty propName
-                    if(metaProperty) {
-                        def persistedInstance = null
-                        if(idValue != 'null' && idValue != null && idValue != '') {
-                            persistedInstance = getPersistentInstance(((MetaBeanProperty)metaProperty).field.type, idValue)
-                            if(persistedInstance == null) {
-                                persistedInstance = ((MetaBeanProperty)metaProperty).field.type.newInstance()
-                            }
-                        }
-
-                        bindProperty obj, source, propName, persistedInstance, listener
-                        if(persistedInstance != null) {
-                            bind persistedInstance, val, listener
-                        }
-                    }
-                }
             }
-        } else {
-        /*
-            if(grailsApplication != null) {
-                def domainClass = (GrailsDomainClass)grailsApplication.getArtefact(DomainClassArtefactHandler.TYPE, obj.getClass().name)
-                if(domainClass != null) {
-                    def property = domainClass.getPersistentProperty(propName)
-                    if (property != null) {
-                        println property
-                    }
-                }
-            }
-            */
+        }
+        if(needsBinding) {
             super.processProperty obj, propName, val, source, whiteList, blackList, listener
         }
     }
