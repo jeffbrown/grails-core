@@ -118,7 +118,27 @@ class GormAwareDataBinder extends SimpleDataBinder {
     protected getPersistentInstance(Class<?> type, id) {
         InvokerHelper.invokeStaticMethod type, 'get', id
     }
-
+    
+    /**
+     * @param obj any object
+     * @param propName the name of a property on obj
+     * @return the Class of the domain class referenced by propName, null if propName does not reference a domain class
+     */
+    protected Class getDomainClassType(obj, String propName) {
+        def domainClassType = null
+        def objClass = obj.getClass()
+        if(grailsApplication) {
+            def domainClass = (GrailsDomainClass)grailsApplication.getArtefact('Domain', objClass.name)
+            if(domainClass) {
+                def prop = domainClass.getPersistentProperty(propName)
+                if(prop && isDomainClass(prop.type)) {
+                    domainClassType = prop.type
+                }
+            }
+        }
+        domainClassType
+    }
+    
     protected boolean isDomainClass(final Class<?> clazz) {
         return DomainClassArtefactHandler.isDomainClass(clazz) || AnnotationDomainClassArtefactHandler.isJPADomainClass(clazz)
     }
@@ -140,8 +160,8 @@ class GormAwareDataBinder extends SimpleDataBinder {
                 metaProperty = obj.metaClass.getMetaProperty propName
             }
             if(metaProperty) {
-                def propertyType = metaProperty.type
-                if(isDomainClass(propertyType)) {
+                def propertyType = getDomainClassType(obj, metaProperty.name)
+                if(propertyType) {
                     needsBinding = false
                     if(isOkToBind(propName, whiteList, blackList)) {
                         def persistedInstance = null
