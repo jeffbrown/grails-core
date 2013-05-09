@@ -146,7 +146,10 @@ class GormAwareDataBinder extends SimpleDataBinder {
                     if(isOkToBind(propName, whiteList, blackList)) {
                         def persistedInstance = null
                         if(idValue != 'null' && idValue != null && idValue != '') {
-                            persistedInstance = getPersistentInstance(((MetaBeanProperty)metaProperty).field.type, idValue)
+                            persistedInstance = getPersistentInstance(propertyType, idValue)
+                            if(persistedInstance == null && val instanceof Map) {
+                                persistedInstance = propertyType.newInstance()
+                            }
                             bindProperty obj, source, propName, persistedInstance, listener
                             if(persistedInstance != null && val instanceof Map) {
                                 bind persistedInstance, val, listener
