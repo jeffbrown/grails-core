@@ -116,7 +116,11 @@ class GormAwareDataBinder extends SimpleDataBinder {
     }
 
     protected getPersistentInstance(Class<?> type, id) {
-        InvokerHelper.invokeStaticMethod type, 'get', id
+        def persistentInstace = null
+        try {
+            persistentInstace = InvokerHelper.invokeStaticMethod type, 'get', id
+        } catch (Exception exc) {}
+        persistentInstace
     }
     
     /**
@@ -167,12 +171,13 @@ class GormAwareDataBinder extends SimpleDataBinder {
                         def persistedInstance = null
                         if(idValue != 'null' && idValue != null && idValue != '') {
                             persistedInstance = getPersistentInstance(propertyType, idValue)
-                            if(persistedInstance == null && val instanceof Map) {
-                                persistedInstance = propertyType.newInstance()
-                            }
-                            bindProperty obj, source, propName, persistedInstance, listener
-                            if(persistedInstance != null && val instanceof Map) {
-                                bind persistedInstance, val, listener
+                            if(persistedInstance == null) {
+                                needsBinding = true
+                            } else {
+                                bindProperty obj, source, propName, persistedInstance, listener
+                                if(persistedInstance != null && val instanceof Map) {
+                                    bind persistedInstance, val, listener
+                                }
                             }
                         } else {
                             bindProperty obj, source, propName, null, listener
