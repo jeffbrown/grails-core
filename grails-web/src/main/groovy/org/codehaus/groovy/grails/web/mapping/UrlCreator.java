@@ -69,7 +69,7 @@ public interface UrlCreator {
      * @param encoding The encoding to use for parameters
      * @return The created URL for the given arguments
      */
-    String createURL(String controller, String action, String pluginName, Map parameterValues, String encoding);
+    String createURL(String controller, String action, String controllerNamespace, String pluginName, Map parameterValues, String encoding);
 
     /**
      * Creates a URL for the given parameters values, controller and action names without the context path information
@@ -99,6 +99,18 @@ public interface UrlCreator {
      *
      * @param controller The controller name
      * @param action The action name
+     * @param pluginName The name of the plugin which provides the controller
+     * @param parameterValues The parameter values
+     * @param encoding The encoding to use for parameters
+     * @return The created URL for the given arguments
+     */
+    String createRelativeURL(String controller, String action, String controllerNamespace, String pluginName, Map parameterValues, String encoding);
+    
+    /**
+     * Creates a URL for the given parameters values, controller and action names without the context path information
+     *
+     * @param controller The controller name
+     * @param action The action name
      * @param parameterValues The parameter values
      * @param encoding The encoding to use for parameters
      * @param fragment The fragment to append to the end
@@ -119,6 +131,19 @@ public interface UrlCreator {
      */
     String createRelativeURL(String controller, String action, String pluginName, Map parameterValues, String encoding, String fragment);
 
+    /**
+     * Creates a URL for the given parameters values, controller and action names without the context path information
+     *
+     * @param controller The controller name
+     * @param action The action name
+     * @param pluginName The name of the plugin which provides the controller
+     * @param parameterValues The parameter values
+     * @param encoding The encoding to use for parameters
+     * @param fragment The fragment to append to the end
+     * @return The created URL for the given arguments
+     */
+    String createRelativeURL(String controller, String action, String controllerNamespace, String pluginName, Map parameterValues, String encoding, String fragment);
+    
     /**
      * Creates a URL for the given parameters values, controller and action names
      *
@@ -143,4 +168,17 @@ public interface UrlCreator {
      * @return The created URL for the given arguments
      */
     String createURL(String controller, String action, String pluginName, Map parameterValues, String encoding, String fragment);
+    
+    /**
+     * Creates a URL for the given parameters values, controller and action names
+     *
+     * @param controller The controller name
+     * @param action The action name
+     * @param pluginName The name of the plugin which provides the controller
+     * @param parameterValues The parameter values
+     * @param encoding The encoding to use for parameters
+     * @param fragment The URL fragment to be appended to the URL following a #
+     * @return The created URL for the given arguments
+     */
+    String createURL(String controller, String action, String controllerNamespace, String pluginName, Map parameterValues, String encoding, String fragment);
 }

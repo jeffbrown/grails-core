@@ -225,6 +225,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
         private Binding binding;
         private Object actionName = null;
         private Object pluginName = null;
+        private Object controllerNamespace = null;
         private Object controllerName = null;
         private Object viewName = null;
         private ServletContext sc;
@@ -301,6 +302,14 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
         public Object getPlugin() {
             return pluginName;
         }
+        
+        public void setControllerNamespace(Object controllerNamespace) {
+            this.controllerNamespace = controllerNamespace;
+        }
+        
+        public Object getControllerNamespace() {
+            return controllerNamespace;
+        }
 
         public Object getView() {
             return viewName;
@@ -359,6 +368,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                         Object controllerName;
                         Object actionName;
                         Object pluginName;
+                        Object controllerNamespace;
                         Object viewName;
                         Object uri;
 
@@ -368,11 +378,13 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                             viewName = binding.getVariables().get(GrailsControllerClass.VIEW);
                             uri = binding.getVariables().get("uri");
                             pluginName = binding.getVariables().get("plugin");
+                            controllerNamespace = binding.getVariables().get("controllerNamespace");
                         }
                         else {
                             controllerName = this.controllerName;
                             actionName = this.actionName;
                             pluginName = this.pluginName;
+                            controllerNamespace = this.controllerNamespace;
                             viewName = this.viewName;
                             uri = this.uri;
                         }
@@ -388,7 +400,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                             }
                         }
                         else {
-                            urlMapping = createURLMapping(urlData, isResponseCode, controllerName, actionName, pluginName, viewName, constraints);
+                            urlMapping = createURLMapping(urlData, isResponseCode, controllerName, actionName, controllerNamespace, pluginName, viewName, constraints);
                         }
 
                         if (binding != null) {
@@ -425,6 +437,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                         actionName = null;
                         viewName = null;
                         pluginName = null;
+                        controllerNamespace = null;
                     }
                     previousConstraints.clear();
                     urlDefiningMode = true;
@@ -514,6 +527,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                 actionName = getActionName(namedArguments, bindingVariables);
             }
             Object pluginName = getPluginName(namedArguments, bindingVariables);
+            Object controllerNamespace = getControllerNamespace(namedArguments, bindingVariables);
 
             Object viewName = getViewName(namedArguments, bindingVariables);
             if (actionName != null && viewName != null) {
@@ -534,7 +548,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                 }
             }
             else {
-                urlMapping = createURLMapping(urlData, isResponseCode, controllerName, actionName, pluginName, viewName, constraints);
+                urlMapping = createURLMapping(urlData, isResponseCode, controllerName, actionName, controllerNamespace, pluginName, viewName, constraints);
             }
 
             Object exceptionArg = getException(namedArguments, bindingVariables);
@@ -597,6 +611,10 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
             return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, "plugin", pluginName);
         }
 
+        private Object getControllerNamespace(Map namedArguments, Map bindingVariables) {
+            return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables, "controllerNamespace", controllerNamespace);
+        }
+        
         private Object getViewName(Map namedArguments, Map bindingVariables) {
             return getVariableFromNamedArgsOrBinding(namedArguments, bindingVariables,GrailsControllerClass.VIEW, viewName);
         }
@@ -610,14 +628,14 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
         }
 
         private UrlMapping createURLMapping(UrlMappingData urlData, boolean isResponseCode,
-                Object controllerName, Object actionName, Object pluginName,
+                Object controllerName, Object actionName, Object controllerNamespace, Object pluginName,
                 Object viewName, ConstrainedProperty[] constraints) {
             if (!isResponseCode) {
-                return new RegexUrlMapping(urlData, controllerName, actionName, pluginName, viewName,
+                return new RegexUrlMapping(urlData, controllerName, actionName, controllerNamespace, pluginName, viewName,
                         constraints, sc);
             }
 
-            return new ResponseCodeUrlMapping(urlData, controllerName, actionName, pluginName, viewName,
+            return new ResponseCodeUrlMapping(urlData, controllerName, actionName, controllerNamespace, pluginName, viewName,
                     null, sc);
         }
     }

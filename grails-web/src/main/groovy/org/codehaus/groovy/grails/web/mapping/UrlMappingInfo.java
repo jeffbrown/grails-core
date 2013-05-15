@@ -51,6 +51,12 @@ public interface UrlMappingInfo {
      */
     String getActionName();
 
+    /**
+     * @return the namespace of the corresponding controller, null if no namespace
+     * is defined for the controller
+     */
+    String getControllerNamespace();
+    
     String getPluginName();
 
     /**

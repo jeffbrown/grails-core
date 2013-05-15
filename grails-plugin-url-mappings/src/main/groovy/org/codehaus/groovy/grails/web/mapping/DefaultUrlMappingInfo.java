@@ -50,6 +50,7 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     private Object controllerName;
     private Object actionName;
     private Object pluginName;
+    private Object controllerNamespace;
     private Object id;
     private static final String ID_PARAM = "id";
     private UrlMappingData urlData;
@@ -72,7 +73,7 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     }
 
     @SuppressWarnings("rawtypes")
-    public DefaultUrlMappingInfo(Object controllerName, Object actionName, Object pluginName, Object viewName, Map params,
+    public DefaultUrlMappingInfo(Object controllerName, Object actionName, Object controllerNamespace, Object pluginName, Object viewName, Map params,
             UrlMappingData urlData, ServletContext servletContext) {
         this(params, urlData, servletContext);
         Assert.isTrue(controllerName != null || viewName != null, "URL mapping must either provide a controller or view name to map to!");
@@ -80,6 +81,7 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
         this.controllerName = controllerName;
         this.actionName = actionName;
         this.pluginName = pluginName;
+        this.controllerNamespace = controllerNamespace;
         if (actionName == null) {
             this.viewName = viewName;
         }
@@ -118,6 +120,11 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
 
     public String getPluginName() {
         return pluginName == null ? null : pluginName.toString();
+    }
+
+    public String getControllerNamespace() {
+        String name = evaluateNameForValue(controllerNamespace);
+        return urlConverter.toUrlElement(name);
     }
 
     public String getControllerName() {

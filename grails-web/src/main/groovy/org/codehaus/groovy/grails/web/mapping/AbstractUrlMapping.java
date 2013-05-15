@@ -34,6 +34,7 @@ public abstract class AbstractUrlMapping implements UrlMapping {
     protected final ConstrainedProperty[] constraints;
     protected Object controllerName;
     protected Object actionName;
+    protected Object controllerNamespace;
     protected Object pluginName;
     protected Object viewName;
     protected Object forwardURI;
@@ -52,9 +53,10 @@ public abstract class AbstractUrlMapping implements UrlMapping {
      * @param constraints Any constraints that apply to the mapping
      * @param servletContext
      */
-    public AbstractUrlMapping(Object controllerName, Object actionName, Object pluginName, Object viewName, ConstrainedProperty[] constraints, ServletContext servletContext) {
+    public AbstractUrlMapping(Object controllerName, Object actionName, Object controllerNamespace, Object pluginName, Object viewName, ConstrainedProperty[] constraints, ServletContext servletContext) {
         this.controllerName = controllerName;
         this.actionName = actionName;
+        this.controllerNamespace = controllerNamespace;
         this.pluginName = pluginName;
         this.constraints = constraints;
         this.viewName = viewName;
@@ -92,6 +94,10 @@ public abstract class AbstractUrlMapping implements UrlMapping {
      */
     public Object getActionName() {
         return actionName;
+    }
+    
+    public Object getControllerNamespace() {
+        return controllerNamespace;
     }
 
     public Object getPluginName() {

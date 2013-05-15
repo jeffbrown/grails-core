@@ -202,4 +202,9 @@ public interface GrailsControllerClass extends InjectableGrailsClass {
      * Initialize the controller class
      */
     void initialize();
+    
+    /**
+     * 
+     */
+    String getNamespace();
 }

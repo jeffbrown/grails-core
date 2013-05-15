@@ -29,6 +29,7 @@ class ForwardUrlMappingInfo extends AbstractUrlMappingInfo {
     String controllerName
     String actionName
     String pluginName
+    String controllerNamespace
     String viewName
     String URI
     String id
