@@ -17,7 +17,9 @@ import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.BooleanExpression;
 import org.codehaus.groovy.ast.expr.CastExpression;
+import org.codehaus.groovy.ast.expr.ClassExpression;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
@@ -31,6 +33,7 @@ import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.grails.compiler.injection.ASTErrorsHelper;
 import org.codehaus.groovy.grails.compiler.injection.ASTValidationErrorsHelper;
+import org.codehaus.groovy.grails.validation.ConstrainedProperty;
 import org.codehaus.groovy.grails.validation.ConstraintsEvaluator;
 import org.codehaus.groovy.grails.web.context.ServletContextHolder;
 import org.codehaus.groovy.grails.web.plugins.support.ValidationSupport;
@@ -82,19 +85,28 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper{
             final String applicationContextVariableName = "$ctx";
             final String constraintsEvaluatorVariableName = "$evaluator";
             final String evaluateMethodName = "evaluate";
+            final MethodNode evaluateMethod = new ClassNode(ConstraintsEvaluator.class).getMethod("evaluate", new Parameter[]{new Parameter(new ClassNode(Class.class), "")});
 
             final BlockStatement ifConstraintsPropertyIsNullBlockStatement = new BlockStatement();
             final Expression declareServletContextExpression = new DeclarationExpression(new VariableExpression(servletContextHolderVariableName, ClassHelper.OBJECT_TYPE), Token.newSymbol(Types.EQUALS, 0, 0), new StaticMethodCallExpression(new ClassNode(ServletContextHolder.class), "getServletContext", new ArgumentListExpression()));
             final Expression declareApplicationContextExpression = new DeclarationExpression(new VariableExpression(applicationContextVariableName, ClassHelper.OBJECT_TYPE), Token.newSymbol(Types.EQUALS, 0, 0), new StaticMethodCallExpression(new ClassNode(WebApplicationContextUtils.class), "getWebApplicationContext", new ArgumentListExpression(new VariableExpression(servletContextHolderVariableName))));
-            final Expression declareConstraintsEvaluatorExpression = new DeclarationExpression(new VariableExpression(constraintsEvaluatorVariableName, ClassHelper.OBJECT_TYPE), Token.newSymbol(Types.EQUALS, 0, 0), new MethodCallExpression(new VariableExpression(applicationContextVariableName), "getBean", new ArgumentListExpression(new ConstantExpression(ConstraintsEvaluator.BEAN_NAME))));
-            final Expression initializeConstraintsFieldExpression = new BinaryExpression(new VariableExpression(CONSTRAINED_PROPERTIES_PROPERTY_NAME), Token.newSymbol(Types.EQUALS, 0, 0), new MethodCallExpression(new VariableExpression(constraintsEvaluatorVariableName), evaluateMethodName, new ArgumentListExpression(THIS_EXPRESSION)));
+            final Expression declareConstraintsEvaluatorExpression = new DeclarationExpression(new VariableExpression(constraintsEvaluatorVariableName, new ClassNode(ConstraintsEvaluator.class)), Token.newSymbol(Types.EQUALS, 0, 0), new MethodCallExpression(new VariableExpression(applicationContextVariableName), "getBean", new ArgumentListExpression(new ConstantExpression(ConstraintsEvaluator.BEAN_NAME))));
+            final MethodCallExpression evaluateMethodExpression = new MethodCallExpression(new VariableExpression(constraintsEvaluatorVariableName), evaluateMethodName, new ArgumentListExpression(THIS_EXPRESSION));
+            if(evaluateMethod != null) {
+                evaluateMethodExpression.setMethodTarget(evaluateMethod);
+            }
+            final Expression initializeConstraintsFieldExpression = new BinaryExpression(new VariableExpression(CONSTRAINED_PROPERTIES_PROPERTY_NAME), Token.newSymbol(Types.EQUALS, 0, 0), evaluateMethodExpression);
             final Statement ifConstraintsPropertyIsNullStatement = new IfStatement(isConstraintsPropertyNull, ifConstraintsPropertyIsNullBlockStatement, new ExpressionStatement(new EmptyExpression()));
 
             ifConstraintsPropertyIsNullBlockStatement.addStatement(new ExpressionStatement(declareServletContextExpression));
             ifConstraintsPropertyIsNullBlockStatement.addStatement(new ExpressionStatement(declareApplicationContextExpression));
             ifConstraintsPropertyIsNullBlockStatement.addStatement(new ExpressionStatement(declareConstraintsEvaluatorExpression));
             ifConstraintsPropertyIsNullBlockStatement.addStatement(new ExpressionStatement(initializeConstraintsFieldExpression));
-
+            
+            
+            Statement statementToMakeUnconstrainedFieldsNullable = makeUnconstrainedFieldsNullable(classNode);
+            ifConstraintsPropertyIsNullBlockStatement.addStatement(statementToMakeUnconstrainedFieldsNullable);
+            
             final BlockStatement methodBlockStatement = new BlockStatement();
             methodBlockStatement.addStatement(ifConstraintsPropertyIsNullStatement);
 
@@ -108,6 +120,47 @@ public class DefaultASTValidateableHelper implements ASTValidateableHelper{
                 classNode.redirect().addMethod(methodNode);
             }
         }
+    }
+
+    protected Statement makeUnconstrainedFieldsNullable(final ClassNode classNode) {
+        final BlockStatement block = new BlockStatement();
+        final MethodNode applyConstraintMethod = new ClassNode(ConstrainedProperty.class).getMethod("applyConstraint", new Parameter[]{new Parameter(new ClassNode(String.class), ""), new Parameter(new ClassNode(Object.class), "")});
+        final MethodNode putMethod = new ClassNode(Map.class).getMethod("put", new Parameter[]{new Parameter(new ClassNode(Object.class), ""), new Parameter(new ClassNode(Object.class), "")});
+        final List<FieldNode> fields = classNode.getFields();
+        for(FieldNode fn : fields) {
+            if(fn.getLineNumber() > 0 && !fn.isStatic()) {
+                final Expression containsKey = new MethodCallExpression(new VariableExpression(CONSTRAINED_PROPERTIES_PROPERTY_NAME), "containsKey", new ConstantExpression(fn.getName()));
+                final ArgumentListExpression constrainedPropertyCtorArgs = new ArgumentListExpression();
+                constrainedPropertyCtorArgs.addExpression(THIS_EXPRESSION);
+                constrainedPropertyCtorArgs.addExpression(new ConstantExpression(fn.getName()));
+                constrainedPropertyCtorArgs.addExpression(new ClassExpression(fn.getType()));
+                final VariableExpression localConstrainedPropertyVariableExpression = new VariableExpression("$localConstrainedProperty", new ClassNode(ConstrainedProperty.class));
+                final Expression newCP = new ConstructorCallExpression(new ClassNode(ConstrainedProperty.class), constrainedPropertyCtorArgs);
+                final Expression assignLocalCP = new BinaryExpression(localConstrainedPropertyVariableExpression, Token.newSymbol(Types.EQUALS, 0, 0), newCP);
+                final MethodCallExpression applyConstraint = new MethodCallExpression(localConstrainedPropertyVariableExpression, "applyConstraint", new ArgumentListExpression(new ConstantExpression(ConstrainedProperty.NULLABLE_CONSTRAINT), new ConstantExpression(Boolean.FALSE)));
+                if(applyConstraintMethod != null) {
+                    applyConstraint.setMethodTarget(applyConstraintMethod);
+                }
+              
+                final MethodCallExpression put = new MethodCallExpression(new VariableExpression(CONSTRAINED_PROPERTIES_PROPERTY_NAME), "put", new ArgumentListExpression(new ConstantExpression(fn.getName()) ,localConstrainedPropertyVariableExpression));
+                if(putMethod != null) {
+                    put.setMethodTarget(putMethod);
+                }
+              
+                final BlockStatement makeNullableBlock = new BlockStatement();
+                final DeclarationExpression declareCoExpression = new DeclarationExpression(
+                        localConstrainedPropertyVariableExpression, Token.newSymbol(Types.EQUALS, 0, 0), new EmptyExpression());
+                makeNullableBlock.addStatement(new ExpressionStatement(declareCoExpression));
+
+                makeNullableBlock.addStatement(new ExpressionStatement(assignLocalCP));
+                makeNullableBlock.addStatement(new ExpressionStatement(applyConstraint));
+                makeNullableBlock.addStatement(new ExpressionStatement(put));
+              
+                final Statement ifContainsKey = new IfStatement(new BooleanExpression(containsKey), new ExpressionStatement(new EmptyExpression()), makeNullableBlock);
+                block.addStatement(ifContainsKey);
+            }
+        }
+        return block;
     }
 
     protected void addValidateMethod(final ClassNode classNode) {

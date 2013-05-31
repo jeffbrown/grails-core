@@ -105,6 +105,10 @@ class ControllerActionTransformerCommandObjectSpec extends Specification {
             def methodActionWithSomeCommand(SomeCommand co) {
                 [commandObject: co]
             }
+
+            def testUnconstrainedProperty(CommandWithUnconstrainedProperty co) {
+                [commandObject: co]
+            }
         }
 
         class PersonCommand {
@@ -163,6 +167,13 @@ class ControllerActionTransformerCommandObjectSpec extends Specification {
         class SubClassController extends MyAbstractController {
             def index = {
                 [name: 'Subclass Controller']
+            }
+        }
+        class CommandWithUnconstrainedProperty {
+            String name
+            Integer age
+            static constraints = {
+                age range: 1..10
             }
         }
         ''')
@@ -319,6 +330,15 @@ class ControllerActionTransformerCommandObjectSpec extends Specification {
             model.artist.name == null
             nameErrorCodes
             'artistCommand.name.nullable.error' in nameErrorCodes
+            
+        when:
+            model = testController.testUnconstrainedProperty()
+            nameErrorCodes = model.commandObject?.errors?.getFieldError('name')?.codes?.toList()
+            
+        then:
+            model.commandObject
+            model.commandObject.name == null
+            'commandWithUnconstrainedProperty.name.nullable.error' in nameErrorCodes
     }
     
     void 'Test beforeValidate gets invoked'() {
