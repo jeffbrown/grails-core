@@ -23,7 +23,12 @@ import groovy.lang.Mixin;
 import java.lang.reflect.Modifier;
 import java.util.List;
 
-import org.codehaus.groovy.ast.*;
+import org.codehaus.groovy.ast.AnnotationNode;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
+import org.codehaus.groovy.ast.InnerClassNode;
+import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.PropertyNode;
 import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.ClassExpression;
 import org.codehaus.groovy.ast.expr.ConstantExpression;
@@ -137,18 +142,8 @@ public abstract class AbstractGrailsArtefactTransformer implements GrailsArtefac
                 }
             }
 
-            while (!implementationNode.equals(AbstractGrailsArtefactTransformer.OBJECT_CLASS)) {
-                List<MethodNode> declaredMethods = implementationNode.getMethods();
-                for (MethodNode declaredMethod : declaredMethods) {
-                    if (GrailsASTUtils.isConstructorMethod(declaredMethod)) {
-                        GrailsASTUtils.addDelegateConstructor(classNode, declaredMethod);
-                    }
-                    else if (isCandidateInstanceMethod(classNode, declaredMethod)) {
-                        GrailsASTUtils.addDelegateInstanceMethod(classNode, apiInstance, declaredMethod, getMarkerAnnotation());
-                    }
-                }
-                implementationNode = implementationNode.getSuperClass();
-            }
+            GrailsASTUtils.addDelegateInstanceMethods(classNode,
+                    implementationNode, apiInstance, getMarkerAnnotation());
             performInjectionInternal(apiInstanceProperty, source, classNode);
         }
 

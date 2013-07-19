@@ -27,12 +27,27 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.lang.StringUtils;
-import org.codehaus.groovy.ast.*;
+import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.AnnotationNode;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.ConstructorNode;
+import org.codehaus.groovy.ast.FieldNode;
+import org.codehaus.groovy.ast.InnerClassNode;
+import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.PropertyNode;
 import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.BooleanExpression;
@@ -64,8 +79,6 @@ import org.codehaus.groovy.grails.commons.GrailsDomainClassProperty;
 import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Token;
 import org.codehaus.groovy.syntax.Types;
-
-import static org.codehaus.groovy.grails.compiler.injection.GrailsASTUtils.addDelegateInstanceMethod;
 
 /**
  * Helper methods for working with Groovy AST trees.
@@ -241,7 +254,27 @@ public class GrailsASTUtils {
     public static MethodNode addDelegateInstanceMethod(ClassNode classNode, Expression delegate, MethodNode declaredMethod, boolean thisAsFirstArgument) {
         return addDelegateInstanceMethod(classNode,delegate,declaredMethod, null, thisAsFirstArgument);
     }
+    
+    public static void addDelegateInstanceMethods(ClassNode classNode,
+            ClassNode implementationNode, Expression apiInstance, AnnotationNode markerAnnotation) {
+        while (!implementationNode.equals(OBJECT_CLASS_NODE)) {
+            List<MethodNode> declaredMethods = implementationNode.getMethods();
+            for (MethodNode declaredMethod : declaredMethods) {
+                if (isConstructorMethod(declaredMethod)) {
+                    addDelegateConstructor(classNode, declaredMethod);
+                }
+                else if (isCandidateInstanceMethod(classNode, declaredMethod)) {
+                    GrailsASTUtils.addDelegateInstanceMethod(classNode, apiInstance, declaredMethod, markerAnnotation);
+                }
+            }
+            implementationNode = implementationNode.getSuperClass();
+        }
+    }
 
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    public static @interface ForceMethodOverride {}
+    
     /**
      * Adds a delegate method to the target class node where the first argument
      * is to the delegate method is 'this'. In other words a method such as
@@ -257,18 +290,20 @@ public class GrailsASTUtils {
     public static MethodNode addDelegateInstanceMethod(ClassNode classNode, Expression delegate, MethodNode declaredMethod, AnnotationNode markerAnnotation, boolean thisAsFirstArgument) {
         Parameter[] parameterTypes = thisAsFirstArgument ? getRemainingParameterTypes(declaredMethod.getParameters()) : declaredMethod.getParameters();
         String methodName = declaredMethod.getName();
-        if (classNode.hasDeclaredMethod(methodName, parameterTypes)) {
-            return null;
+        List<AnnotationNode> overrideAnnotations = declaredMethod.getAnnotations(new ClassNode(ForceMethodOverride.class));
+        if(overrideAnnotations.size() == 0) {
+            if (classNode.hasDeclaredMethod(methodName, parameterTypes)) {
+                return null;
+            }
+            String propertyName = GrailsClassUtils.getPropertyForGetter(methodName);
+            if (propertyName != null && parameterTypes.length == 0 && classNode.hasProperty(propertyName)) {
+                return null;
+            }
+            propertyName = GrailsClassUtils.getPropertyForSetter(methodName);
+            if (propertyName != null && parameterTypes.length == 1 && classNode.hasProperty(propertyName)) {
+                return null;
+            }
         }
-        String propertyName = GrailsClassUtils.getPropertyForGetter(methodName);
-        if (propertyName != null && parameterTypes.length == 0 && classNode.hasProperty(propertyName)) {
-            return null;
-        }
-        propertyName = GrailsClassUtils.getPropertyForSetter(methodName);
-        if (propertyName != null && parameterTypes.length == 1 && classNode.hasProperty(propertyName)) {
-            return null;
-        }
-
         BlockStatement methodBody = new BlockStatement();
         ArgumentListExpression arguments = createArgumentListFromParameters(parameterTypes, thisAsFirstArgument);
 
