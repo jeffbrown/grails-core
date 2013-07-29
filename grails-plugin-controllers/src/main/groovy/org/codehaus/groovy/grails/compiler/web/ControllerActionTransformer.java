@@ -31,10 +31,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.collections.Predicate;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.ast.Parameter;
@@ -70,6 +72,7 @@ import org.codehaus.groovy.grails.compiler.injection.AstTransformer;
 import org.codehaus.groovy.grails.compiler.injection.GrailsASTUtils;
 import org.codehaus.groovy.grails.compiler.injection.GrailsArtefactClassInjector;
 import org.codehaus.groovy.grails.web.binding.DefaultASTDatabindingHelper;
+import org.codehaus.groovy.grails.web.controllers.DefaultControllerExceptionHandlerMetaData;
 import org.codehaus.groovy.syntax.Token;
 import org.codehaus.groovy.syntax.Types;
 import org.grails.databinding.bindingsource.DataBindingSourceCreationException;
@@ -180,7 +183,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
     public void performInjectionOnAnnotatedClass(SourceUnit source, GeneratorContext context, ClassNode classNode) {
         final String className = classNode.getName();
         if (className.endsWith(ControllerArtefactHandler.TYPE)) {
-            annotateCandidateActionMethods(classNode, source, context);
+            processMethods(classNode, source, context);
             processClosures(classNode, source, context);
         }
 
@@ -191,31 +194,69 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         performInjectionOnAnnotatedClass(source,null, classNode);
     }
 
-    private void annotateCandidateActionMethods(ClassNode classNode, SourceUnit source,
+    private boolean isExceptionHandlingMethod(MethodNode methodNode) {
+        boolean isExceptionHandler = false;
+        Parameter[] parameters = methodNode.getParameters();
+        if(parameters.length == 1) {
+            ClassNode parameterTypeClassNode = parameters[0].getType();
+            isExceptionHandler = parameterTypeClassNode.isDerivedFrom(new ClassNode(Throwable.class));
+        }
+        return isExceptionHandler;
+    }
+    private void processMethods(ClassNode classNode, SourceUnit source,
             GeneratorContext context) {
 
         List<MethodNode> deferredNewMethods = new ArrayList<MethodNode>();
+        List<MethodNode> exceptionHandlerMethods = new ArrayList<MethodNode>();
         for (MethodNode method : classNode.getMethods()) {
             if (!method.isStatic() && method.isPublic() &&
                     method.getAnnotations(ACTION_ANNOTATION_NODE.getClassNode()).isEmpty() &&
                     method.getLineNumber() >= 0) {
 
                 if (method.getReturnType().getName().equals(VOID_TYPE)) continue;
-                List<MethodNode> declaredMethodsWithThisName = classNode.getDeclaredMethods(method.getName());
-                if (declaredMethodsWithThisName != null && declaredMethodsWithThisName.size() > 1) {
-                    String message = "Controller actions may not be overloaded.  The [" +
-                            method.getName() +
-                            "] action has been overloaded in [" +
-                            classNode.getName() +
-                            "].";
-                    GrailsASTUtils.error(source, method, message);
-                }
-                MethodNode wrapperMethod = convertToMethodAction(classNode, method, source, context);
-                if (wrapperMethod != null) {
-                    deferredNewMethods.add(wrapperMethod);
+                if(isExceptionHandlingMethod(method)) {
+                    exceptionHandlerMethods.add(method);
+                } else {
+                    final List<MethodNode> declaredMethodsWithThisName = classNode.getDeclaredMethods(method.getName());
+                    if(declaredMethodsWithThisName != null) {
+                        final int numberOfNonExceptionHandlerMethodsWithThisName = org.apache.commons.collections.CollectionUtils.countMatches(declaredMethodsWithThisName, new Predicate() {
+                            public boolean evaluate(Object object) {
+                                return !isExceptionHandlingMethod((MethodNode) object);
+                            }
+                        });
+                        if (numberOfNonExceptionHandlerMethodsWithThisName > 1) {
+                            String message = "Controller actions may not be overloaded.  The [" +
+                                    method.getName() +
+                                    "] action has been overloaded in [" +
+                                    classNode.getName() +
+                                    "].";
+                            GrailsASTUtils.error(source, method, message);
+                        }
+                    }
+                    MethodNode wrapperMethod = convertToMethodAction(classNode, method, source, context);
+                    if (wrapperMethod != null) {
+                        deferredNewMethods.add(wrapperMethod);
+                    }
                 }
             }
         }
+        String propertyName = "$exceptionHandlerMetaData";
+        FieldNode field = classNode.getField(propertyName);
+        if(field == null) {
+            ListExpression le = new ListExpression();
+            for(MethodNode exceptionHandlerMethod : exceptionHandlerMethods) {
+                Class exceptionType = exceptionHandlerMethod.getParameters()[0].getType().getPlainNodeReference().getTypeClass();
+                String name = exceptionHandlerMethod.getName();
+                ArgumentListExpression ctorArgs = new ArgumentListExpression();
+                ctorArgs.addExpression(new ConstantExpression(name));
+                ctorArgs.addExpression(new ClassExpression(new ClassNode(exceptionType)));
+                le.addExpression(new ConstructorCallExpression(new ClassNode(DefaultControllerExceptionHandlerMetaData.class), ctorArgs));
+            }
+            classNode.addField(propertyName,
+                    Modifier.STATIC | Modifier.PRIVATE | Modifier.FINAL, new ClassNode(List.class),
+                    le);
+        }
+
 
         for (MethodNode newMethod : deferredNewMethods) {
             classNode.addMethod(newMethod);
