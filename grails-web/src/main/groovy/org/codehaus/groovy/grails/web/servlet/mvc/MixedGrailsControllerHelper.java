@@ -29,6 +29,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.http.HttpServletResponse;
 
 import org.codehaus.groovy.grails.web.servlet.mvc.exceptions.ControllerExecutionException;
+import org.codehaus.groovy.grails.web.servlet.mvc.exceptions.GrailsMVCException;
+import org.codehaus.groovy.runtime.InvokerHelper;
+import org.codehaus.groovy.runtime.InvokerInvocationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aop.framework.AopProxyUtils;
@@ -65,7 +68,7 @@ public class MixedGrailsControllerHelper extends AbstractGrailsControllerHelper 
     @Override
     protected Object retrieveAction(GroovyObject controller, String actionName, HttpServletResponse response) {
         Pair<Class<?>, String> key = new Pair<Class<?>, String>(controller.getClass(), actionName);
-
+ 
         Method mAction = controllerToActionMethodCache.get(key);
 
         if (mAction != null && mAction != NULL_METHOD_HOLDER) {
@@ -141,7 +144,35 @@ public class MixedGrailsControllerHelper extends AbstractGrailsControllerHelper 
             return ((Closure<?>)action).call();
         }
         catch (Exception e) {
+            final Exception targetException = findWrappedException(e);
+            try {
+//              Method exceptionHandlerMethod = (Method) GrailsMetaClassUtils.invokeMethodIfExists(controller, "getExceptionHandlerMethodFor", new Object[]{targetException.getClass()});
+                Method exceptionHandlerMethod = (Method) InvokerHelper.invokeMethod(controller, "getExceptionHandlerMethodFor", new Object[]{targetException.getClass()});
+                if(exceptionHandlerMethod != null) {
+                    return exceptionHandlerMethod.invoke(controller, targetException);
+                }
+            } catch (Exception e2) {
+                // TODO  throw the original one (e), or the new one (e2) here?
+                throw new ControllerExecutionException("Runtime error executing action", e2);
+            }
             throw new ControllerExecutionException("Runtime error executing action", e);
         }
+    }
+
+    protected Exception findWrappedException(Exception e) {
+        if ((e instanceof InvokerInvocationException)||(e instanceof GrailsMVCException)) {
+            Throwable t = getRootCause(e);
+            if (t instanceof Exception) {
+                e = (Exception) t;
+            }
+        }
+        return e;
+    }
+
+    protected Throwable getRootCause(Throwable ex) {
+        while (ex.getCause() != null && !ex.equals(ex.getCause())) {
+            ex = ex.getCause();
+        }
+        return ex;
     }
 }
