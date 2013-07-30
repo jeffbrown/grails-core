@@ -24,6 +24,7 @@ import grails.web.Action;
 import grails.web.RequestParameter;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.ArrayList;
@@ -53,6 +54,7 @@ import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.ListExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
+import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.ast.expr.TernaryExpression;
 import org.codehaus.groovy.ast.expr.TupleExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
@@ -63,6 +65,7 @@ import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.IfStatement;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
+import org.codehaus.groovy.ast.stmt.ThrowStatement;
 import org.codehaus.groovy.ast.stmt.TryCatchStatement;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.SourceUnit;
@@ -413,6 +416,53 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         } else {
             methodNode.addAnnotation(ACTION_ANNOTATION_NODE);
         }
+        wrapMethodBodyWithExceptionHandling(methodNode);
+    }
+
+    /**
+     * This will wrap the method body in a try catch block which does something
+     * like this:
+     * <pre>
+     * try {
+     *     // original method body here
+     * } catch (Exception $caughtException) {
+     *     Method $method = getExceptionHandlerMethod($caughtException.getClass())
+     *     if($method) {
+     *         return $method.invoke(this, $caughtException)
+     *     } else {
+     *         throw $caughtException
+     *     }
+     * }
+     * </pre>
+     * @param methodNode the method to add the try catch block to
+     */
+    protected void wrapMethodBodyWithExceptionHandling(
+            final MethodNode methodNode) {
+        final BlockStatement catchBlockCode = new BlockStatement();
+        final String caughtExceptionArgumentName = "$caughtException";
+        final Expression caughtExceptionVariableExpression = new VariableExpression(caughtExceptionArgumentName);
+        final Expression caughtExceptionTypeExpression = new PropertyExpression(caughtExceptionVariableExpression, "class");
+        final Expression getExceptionHandlerMethodCall = new MethodCallExpression(THIS_EXPRESSION, "getExceptionHandlerMethodFor", caughtExceptionTypeExpression);
+        
+        final String exceptionHandlerMethodVariableName = "$method";
+        final Expression declareExceptionHandlerMethod = new DeclarationExpression(
+                new VariableExpression(exceptionHandlerMethodVariableName, new ClassNode(Method.class)), Token.newSymbol(Types.EQUALS, 0, 0), getExceptionHandlerMethodCall);
+        final ArgumentListExpression invokeArguments = new ArgumentListExpression();
+        invokeArguments.addExpression(THIS_EXPRESSION);
+        invokeArguments.addExpression(caughtExceptionVariableExpression);
+        final Expression invokeExceptionHandlerMethodExpression = new MethodCallExpression(new VariableExpression(exceptionHandlerMethodVariableName), "invoke", invokeArguments);
+        final Statement returnStatement = new ReturnStatement(invokeExceptionHandlerMethodExpression);
+        final Statement throwCaughtExceptionStatement = new ThrowStatement(caughtExceptionVariableExpression);
+        final Statement ifExceptionHandlerMethodExistsStatement = new IfStatement(new BooleanExpression(new VariableExpression(exceptionHandlerMethodVariableName)), returnStatement, throwCaughtExceptionStatement);
+        catchBlockCode.addStatement(new ExpressionStatement(declareExceptionHandlerMethod));
+        catchBlockCode.addStatement(ifExceptionHandlerMethodExistsStatement);
+        
+        final CatchStatement catchStatement = new CatchStatement(new Parameter(new ClassNode(Exception.class), caughtExceptionArgumentName), catchBlockCode);
+        final Statement methodBody = methodNode.getCode();
+        final TryCatchStatement tryCatchStatement = new TryCatchStatement(methodBody, new EmptyStatement());
+        tryCatchStatement.addCatch(catchStatement);
+        
+        methodNode.setCode(tryCatchStatement);
     }
 
     protected void transformClosureToMethod(ClassNode classNode, ClosureExpression closureAction,
