@@ -26,6 +26,7 @@ import org.codehaus.groovy.grails.web.servlet.GrailsApplicationAttributes
 import org.springframework.web.servlet.ModelAndView
 
 import spock.lang.Ignore
+import spock.lang.Issue
 import spock.lang.Specification
 
 @TestFor(BookController)
@@ -197,6 +198,29 @@ class RespondMethodSpec extends Specification{
         modelAndView instanceof ModelAndView
         modelAndView.model == [book: book, extra: true]
         modelAndView.viewName == 'showWithModel'
+    }
+    
+    @Issue('GRAILS-10683')
+    void "Test responding to a REST call with an empty collection"() {
+ 
+        when:
+        response.format = 'json'
+        controller.index()
+ 
+        then:
+        response.status == 200
+        response.contentAsString == '[]'
+    }
+    
+    @Issue('GRAILS-10683')
+    @Ignore
+    void "Test responding to an HTML call with an empty collection"() {
+        when:
+        response.format = 'html'
+        controller.index()
+ 
+        then:
+        response.status == 200
     }
 }
 
