@@ -213,7 +213,6 @@ class RespondMethodSpec extends Specification{
     }
     
     @Issue('GRAILS-10683')
-    @Ignore
     void "Test responding to an HTML call with an empty collection"() {
         when:
         response.format = 'html'
