@@ -135,6 +135,7 @@ class ValidateableSpec extends Specification {
         !constraints.town.nullable
     }
 
+    @Issue('GRAILS-11416')
     void 'Test that constraints are nullable by default if overridden'() {
         when:
         def constraints = MyNullableValidateable.constraints
