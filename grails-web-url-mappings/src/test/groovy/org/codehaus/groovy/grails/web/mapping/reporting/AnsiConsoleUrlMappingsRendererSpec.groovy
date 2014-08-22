@@ -80,24 +80,24 @@ Controller: publisher
             println sw.toString()
         then:"The output is correct"
             sw.toString() == '''Dynamic Mappings
- |    *     | /                                                 | View:   /index           |
- |    *     | /${controller}/${action}?/${id}?(.${format)?      | Action: (default action) |
+ |    *     | /                                                  | View:   /index           |
+ |    *     | /${controller}/${action}?/${id}?(.${format})?      | Action: (default action) |
 
 Controller: errors
- |    *     | ERROR: 500                                        | Action: (default action) |
+ |    *     | ERROR: 500                                         | Action: (default action) |
 
 Controller: foo
- |   GET    | /foo/create                                       | Action: create           |
- |   POST   | /foo                                              | Action: save             |
- |   GET    | /foo                                              | Action: index            |
- |   GET    | /foo/${id}/edit                                   | Action: edit             |
- |  DELETE  | /foo/${id}                                        | Action: delete           |
- |  PATCH   | /foo/${id}                                        | Action: patch            |
- |   PUT    | /foo/${id}                                        | Action: update           |
- |   GET    | /foo/${id}                                        | Action: show             |
+ |   GET    | /foo/create                                        | Action: create           |
+ |   POST   | /foo                                               | Action: save             |
+ |   GET    | /foo                                               | Action: index            |
+ |   GET    | /foo/${id}/edit                                    | Action: edit             |
+ |  DELETE  | /foo/${id}                                         | Action: delete           |
+ |  PATCH   | /foo/${id}                                         | Action: patch            |
+ |   PUT    | /foo/${id}                                         | Action: update           |
+ |   GET    | /foo/${id}                                         | Action: show             |
 
 Controller: image
- |    *     | /images/${name}**.jpg                             | Action: (default action) |
+ |    *     | /images/${name}**.jpg                              | Action: (default action) |
 
 '''.denormalize()
     }
