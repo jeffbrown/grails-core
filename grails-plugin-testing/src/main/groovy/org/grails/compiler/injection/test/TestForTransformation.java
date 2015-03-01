@@ -18,14 +18,9 @@ package org.grails.compiler.injection.test;
 import grails.compiler.ast.GrailsArtefactClassInjector;
 import grails.test.mixin.TestFor;
 import grails.test.mixin.domain.DomainClassUnitTestMixin;
-import grails.test.mixin.services.ServiceUnitTestMixin;
 import grails.test.mixin.support.MixinMethod;
 import grails.test.mixin.support.TestMixinRegistrar;
 import grails.test.mixin.support.TestMixinRegistry;
-import grails.test.mixin.web.ControllerUnitTestMixin;
-import grails.test.mixin.web.FiltersUnitTestMixin;
-import grails.test.mixin.web.GroovyPageUnitTestMixin;
-import grails.test.mixin.web.UrlMappingsUnitTestMixin;
 import grails.util.BuildSettings;
 import grails.util.GrailsNameUtils;
 import groovy.util.GroovyTestCase;
@@ -37,17 +32,11 @@ import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.syntax.Token;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 import org.grails.compiler.injection.GrailsASTUtils;
-import org.grails.compiler.logging.LoggingTransformer;
-import org.grails.core.artefact.ControllerArtefactHandler;
-import org.grails.core.artefact.ServiceArtefactHandler;
-import org.grails.core.artefact.TagLibArtefactHandler;
-import org.grails.core.artefact.UrlMappingsArtefactHandler;
 import org.grails.core.io.DefaultResourceLocator;
 import org.grails.core.io.ResourceLocator;
 import org.grails.core.io.support.GrailsFactoriesLoader;
 import org.grails.io.support.FileSystemResource;
 import org.grails.io.support.GrailsResourceUtils;
-import org.grails.plugins.web.filters.FiltersConfigArtefactHandler;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -210,11 +199,6 @@ public class TestForTransformation extends TestMixinTransformation implements Te
         autoAnnotateSetupTeardown(classNode);
         boolean isJunit3Test = isJunit3Test(classNode);
 
-        // make sure the 'log' property is not the one from GroovyTestCase
-        FieldNode log = classNode.getField("log");
-        if (log == null || log.getDeclaringClass().equals(GROOVY_TEST_CASE_CLASS)) {
-            LoggingTransformer.addLogField(classNode, classNode.getName());
-        }
         boolean isSpockTest = isSpockTest(classNode);
 
         boolean isJunit4 = !isSpockTest && !isJunit3Test;

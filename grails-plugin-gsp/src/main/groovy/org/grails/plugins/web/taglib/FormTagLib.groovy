@@ -18,6 +18,7 @@ package org.grails.plugins.web.taglib
 import grails.artefact.TagLibrary
 import grails.gsp.TagLib
 import groovy.transform.CompileStatic
+import groovy.util.logging.Commons
 
 import java.text.DateFormat
 import java.text.DateFormatSymbols
@@ -44,6 +45,7 @@ import org.springframework.web.servlet.support.RequestDataValueProcessor
  * @author Graeme Rocher
  */
 @TagLib
+@Commons
 class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrary {
 
     private static final DEFAULT_CURRENCY_CODES = ['EUR', 'XCD', 'USD', 'XOF', 'NOK', 'AUD',
