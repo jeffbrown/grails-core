@@ -1,10 +1,23 @@
 package org.grails.compiler.injection.test
+
 import grails.boot.config.GrailsApplicationContextLoader
 import grails.boot.config.GrailsAutoConfiguration
 import grails.test.mixin.integration.Integration
 import groovy.transform.CompileStatic
-import org.codehaus.groovy.ast.*
-import org.codehaus.groovy.ast.expr.*
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.AnnotatedNode
+import org.codehaus.groovy.ast.AnnotationNode
+import org.codehaus.groovy.ast.ClassHelper
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
+import org.codehaus.groovy.ast.expr.ClassExpression
+import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.Expression
+import org.codehaus.groovy.ast.expr.GStringExpression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.control.CompilePhase
@@ -24,6 +37,7 @@ import org.springframework.test.context.web.WebAppConfiguration
 import org.springframework.util.ClassUtils
 
 import java.lang.reflect.Modifier
+
 /*
  * Copyright 2014 original authors
  *
@@ -79,7 +93,7 @@ class IntegrationTestMixinTransformation implements ASTTransformation {
                 GrailsASTUtils.error(source, applicationClassExpression, "Invalid applicationClass attribute value [${applicationClassNode.getName()}].  The applicationClass attribute must specify a class which extends grails.boot.config.GrailsAutoConfiguration.", true)
             }
         } else {
-            String mainClass = MainClassFinder.searchMainClass()
+            String mainClass = getMainClassName(source)
             if(mainClass) {
                 applicationClassNode = ClassHelper.make(mainClass)
             }
@@ -121,9 +135,32 @@ class IntegrationTestMixinTransformation implements ASTTransformation {
             else {
                 classNode.addAnnotation(new AnnotationNode(INTEGRATION_TEST_CLASS_NODE))
             }
-
         }
+    }
 
+    protected String getMainClassName(SourceUnit source) {
+        String mainClassName
+        File projectDir = getProjectDirectory(source)
+        if (projectDir) {
+            mainClassName = MainClassFinder.searchMainClass([projectDir])
+        } else {
+            mainClassName = MainClassFinder.searchMainClass()
+        }
+        mainClassName
+    }
+
+    protected File getProjectDirectory(SourceUnit source) {
+        File projectDir
+        String sourceName = source.name
+        int indexOfSrc = sourceName.lastIndexOf("${File.separator}src${File.separator}")
+        if (indexOfSrc > 0) {
+            String projectDirName = sourceName[0..(indexOfSrc)]
+            def f = new File(projectDirName)
+            if(f.isDirectory()) {
+                projectDir = f
+            }
+        }
+        projectDir
     }
 
     protected void enhanceGebSpecWithPort(ClassNode classNode) {
@@ -143,5 +180,4 @@ class IntegrationTestMixinTransformation implements ASTTransformation {
             classNode.addMethod(method)
         }
     }
-
 }

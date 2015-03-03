@@ -25,9 +25,24 @@ class MainClassFinder {
 
     static String searchMainClass() {
         if(mainClassName) return mainClassName
+        def searchDirs = getDirectoriesToSearch()
+        searchMainClass searchDirs
+    }
 
+    static String searchMainClass(Collection<File> searchDirs) {
+        if(mainClassName) return mainClassName
+
+        String mainClass = null
+        for (File dir in searchDirs) {
+            mainClass = findMainClass(dir)
+            if (mainClass) break
+        }
+        mainClass
+    }
+
+    protected static List<File> getDirectoriesToSearch() {
+        def searchDirs
         def classesDir = BuildSettings.CLASSES_DIR
-        Collection<File> searchDirs
         if (classesDir == null) {
             def tokens = System.getProperty('java.class.path').split(System.getProperty('path.separator'))
             def dirs = tokens.findAll() { String str -> !str.endsWith('.jar') }.collect() { String str -> new File(str) }
@@ -35,24 +50,7 @@ class MainClassFinder {
         } else {
             searchDirs = [classesDir]
         }
-        def userDir = new File(System.getProperty('user.dir'))
-        if(new File(userDir, 'settings.gradle').exists()) {
-            userDir.eachDir { File dir ->
-                // looking for subproject build directories...
-                def mainClassesDir = new File(dir, 'build/classes/main')
-                if(mainClassesDir.exists()) {
-                    searchDirs << mainClassesDir
-                }
-            }
-        }
-
-        String mainClass = null
-
-        for (File dir in searchDirs) {
-            mainClass = findMainClass(dir)
-            if (mainClass) break
-        }
-        mainClass
+        return searchDirs
     }
 
     static String findMainClass(File rootFolder = BuildSettings.CLASSES_DIR) {
