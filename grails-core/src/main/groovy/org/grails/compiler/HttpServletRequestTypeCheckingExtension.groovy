@@ -18,7 +18,6 @@ package org.grails.compiler
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport
-import org.codehaus.groovy.transform.stc.StaticTypesMarker
 
 /**
  *
@@ -35,8 +34,8 @@ class HttpServletRequestTypeCheckingExtension extends GroovyTypeCheckingExtensio
                 ConstantExpression constantExpression = property
                 String propertyName = constantExpression.value
                 if('post' == propertyName) {
-                    def it = expression.objectExpression.getNodeMetaData(StaticTypesMarker.INFERRED_TYPE)
-                    if(it.name == 'javax.servlet.http.HttpServletRequest') {
+                    def referenceType = getType(expression.objectExpression)
+                    if(referenceType.name == 'javax.servlet.http.HttpServletRequest') {
                         return makeDynamic(expression)
                     }
                 }
