@@ -15,7 +15,6 @@
  */
 package org.grails.compiler
 
-import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport
 
@@ -30,9 +29,8 @@ class HttpServletRequestTypeCheckingExtension extends GroovyTypeCheckingExtensio
     def run() {
         unresolvedProperty { PropertyExpression expression ->
             def property = expression.property
-            if(property instanceof ConstantExpression) {
-                ConstantExpression constantExpression = property
-                String propertyName = constantExpression.value
+            if(isConstantExpression(property)) {
+                def propertyName = property.value
                 if('post' == propertyName) {
                     def referenceType = getType(expression.objectExpression)
                     if(referenceType.name == 'javax.servlet.http.HttpServletRequest') {
