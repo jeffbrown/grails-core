@@ -356,12 +356,16 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
      * @return true if the view for this GrailsWebRequest should be rendered
      */
     public boolean isRenderView() {
+        return false
+        /*
         final HttpServletRequest currentRequest = getCurrentRequest();
         HttpServletResponse currentResponse = getCurrentResponse();
         return renderView &&
+
                 !currentResponse.isCommitted() &&
                 currentResponse.getStatus() < 300 &&
                 currentRequest.getAttribute(REDIRECT_CALLED) == null;
+        */
     }
 
     public String getId() {

@@ -1,9 +1,0 @@
-dependencies {
-
-    compile project(":grails-web"),
-            project(":grails-plugin-controllers"),
-            project(":grails-plugin-datasource")
-
-    testCompile project(":grails-plugin-url-mappings"),
-                project(":grails-test-suite-base")
-}
