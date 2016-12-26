@@ -356,7 +356,7 @@ public class GrailsWebRequest extends DispatcherServletWebRequest  {
      * @return true if the view for this GrailsWebRequest should be rendered
      */
     public boolean isRenderView() {
-        return false
+        return false;
         /*
         final HttpServletRequest currentRequest = getCurrentRequest();
         HttpServletResponse currentResponse = getCurrentResponse();
